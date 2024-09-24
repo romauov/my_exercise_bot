@@ -9,7 +9,7 @@ from app.utils import set_schedule
 logging.basicConfig(level=logging.INFO)
 
 async def main():
-    scheduler = AsyncIOScheduler(timezone="UTC")
+    scheduler = AsyncIOScheduler(timezone="Europe/Samara")
     
     bot = Bot(token=s.tg_token)
     dp = Dispatcher()
