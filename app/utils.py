@@ -11,16 +11,15 @@ def pick_exercises():
         exercises = json.load(f)
     return random.choice(exercises)
 
-def get_full_schedule(schedule):
+def get_full_schedule(schedule, timeshift):
     full_schedule = {}
     for day in schedule:
-        hours = [i for i in range(schedule[day][0], schedule[day][1] + 1)]
+        hours = [i - timeshift + 24 if i - timeshift < 0 else i - timeshift for i in range(schedule[day][0], schedule[day][1] + 1)]
         full_schedule[day] = hours
     return full_schedule
 
-async def send_scheduled_message(bot: Bot, day, hour):
+async def send_scheduled_message(bot: Bot):
     chat_id = s.my_tg_id
-    await bot.send_message(chat_id=chat_id, text=f"{day} {hour}")
     await bot.send_message(chat_id=chat_id, text="Делай " + pick_exercises())
     
 def set_schedule(scheduler, bot):
@@ -28,12 +27,12 @@ def set_schedule(scheduler, bot):
     with open('schedule.json') as f:
         schedule = json.load(f)
         
-    full_schedule = get_full_schedule(schedule)
+    full_schedule = get_full_schedule(schedule, timeshift=4)
     
     for day in full_schedule:
         for hour in full_schedule[day]:
             scheduler.add_job(send_scheduled_message, 
                               CronTrigger(day_of_week=day, hour=hour, minute=00, start_date=datetime.now()), 
-                              kwargs={'bot': bot, 'day': day, 'hour': hour})
+                              kwargs={'bot': bot})
 
     scheduler.start()
