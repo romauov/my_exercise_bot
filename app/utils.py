@@ -18,8 +18,9 @@ def get_full_schedule(schedule):
         full_schedule[day] = hours
     return full_schedule
 
-async def send_scheduled_message(bot: Bot):
+async def send_scheduled_message(bot: Bot, day, hour):
     chat_id = s.my_tg_id
+    await bot.send_message(chat_id=chat_id, text=f"{day} {hour}")
     await bot.send_message(chat_id=chat_id, text="Делай " + pick_exercises())
     
 def set_schedule(scheduler, bot):
@@ -31,6 +32,8 @@ def set_schedule(scheduler, bot):
     
     for day in full_schedule:
         for hour in full_schedule[day]:
-            scheduler.add_job(send_scheduled_message, CronTrigger(day_of_week=day, hour=hour, minute=00, start_date=datetime.now()), kwargs={'bot': bot})
+            scheduler.add_job(send_scheduled_message, 
+                              CronTrigger(day_of_week=day, hour=hour, minute=00, start_date=datetime.now()), 
+                              kwargs={'bot': bot, 'day': day, 'hour': hour})
 
     scheduler.start()
