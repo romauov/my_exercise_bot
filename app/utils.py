@@ -9,8 +9,8 @@ from apscheduler.triggers.cron import CronTrigger
 from app.settings import secrets as s
 
 
-def pick_exercises():
-    with open('exercises_list.json') as f:
+def pick_exercises(path):
+    with open(path) as f:
         exercises = json.load(f)
     return random.choice(exercises)
 
@@ -23,7 +23,7 @@ def get_full_schedule(schedule, timeshift):
 
 async def send_scheduled_message(bot: Bot):
     chat_id = s.my_tg_id
-    await bot.send_message(chat_id=chat_id, text="Делай " + pick_exercises())
+    await bot.send_message(chat_id=chat_id, text="Делай " + pick_exercises('exercises_list.json') + " и " + pick_exercises('face_exercises.json'))
     
 def set_schedule(scheduler, bot):
     
