@@ -1,8 +1,5 @@
 import json
-import matplotlib.pyplot as plt
-import numpy as np
 import random
-import pandas as pd
 from datetime import datetime
 from aiogram import Bot
 from apscheduler.triggers.cron import CronTrigger
@@ -40,30 +37,6 @@ def set_schedule(scheduler, bot):
 
     scheduler.start()
 
-def draw_plot(user_id, period=14):
-    with open(f'{user_id}_weights.json', 'r') as file:
-                json_data = json.load(file)
-
-    df = pd.DataFrame(json_data)
-    if period != 0:
-        last_records = df.tail(period)
-        title = f'Вес за последние {period} дней'
-    else:
-        last_records = df
-        title = 'Вес за всё время'
-    avg_weight = round(np.nanmean(last_records['weight']), 2)
-    plt.figure(figsize=(10, 5))
-    plt.plot(last_records['date'], last_records['weight'], 'o-r', label=avg_weight )
-    plt.axhline(y=avg_weight)
-    plt.xlabel('Дата')
-    plt.ylabel('Вес')
-    plt.title(title)
-    plt.grid(True)
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.legend()
-    plt.savefig('plot.png')
-    plt.close()
      
 def save_weight_json(user_id, weight, date):
     data = {
