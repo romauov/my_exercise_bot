@@ -3,6 +3,7 @@ import random
 from datetime import datetime
 from aiogram import Bot
 from apscheduler.triggers.cron import CronTrigger
+from app.draw_plot import draw_plot
 from app.settings import secrets as s
 
 
