@@ -11,7 +11,6 @@ def draw_plot(user_id, period='last'):
     df['date'] = pd.to_datetime(df['date'], dayfirst=True)
     df = df.sort_values('date')
     
-
     period_map = {
         'last': 14,
         'month': 30,
@@ -29,7 +28,10 @@ def draw_plot(user_id, period='last'):
     else:
         last_records = df
 
+    # Вычисляем статистики для ВСЕХ данных в выбранном периоде
     avg_weight = round(np.nanmean(last_records['weight']), 2)
+    min_weight = round(last_records['weight'].min(), 2)  # Минимальный вес
+    max_weight = round(last_records['weight'].max(), 2)  # Максимальный вес
 
     resampled_data = None
     title_suffix = ''
@@ -56,10 +58,17 @@ def draw_plot(user_id, period='last'):
 
     plot_data = resampled_data if resampled_data is not None else last_records
     
-
     plt.figure(figsize=(10, 5))
     plt.plot(plot_data['date'], plot_data['weight'], 'o-r', label='Вес')
-    plt.axhline(y=avg_weight, color='gray', linestyle='--', label=f'Средний вес: {avg_weight} кг')
+
+    plt.axhline(y=min_weight, color='blue', linestyle=':', 
+                label=f'Мин: {min_weight} кг')
+    plt.axhline(y=max_weight, color='green', linestyle=':', 
+                label=f'Макс: {max_weight} кг')
+
+    plt.axhline(y=avg_weight, color='gray', linestyle='--', 
+                label=f'Средний: {avg_weight} кг')
+
     plt.xlabel('Дата')
     plt.ylabel('Вес (кг)')
     plt.title(title)
@@ -69,4 +78,3 @@ def draw_plot(user_id, period='last'):
     plt.legend()
     plt.savefig('plot.png')
     plt.close()
-    
