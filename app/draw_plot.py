@@ -69,3 +69,4 @@ def draw_plot(user_id, period='last'):
     plt.legend()
     plt.savefig('plot.png')
     plt.close()
+    
