@@ -29,7 +29,6 @@ def draw_plot(user_id, period='last'):
         last_records = df
 
     # Вычисляем статистики для ВСЕХ данных в выбранном периоде
-    avg_weight = round(np.nanmean(last_records['weight']), 2)
     min_weight = round(last_records['weight'].min(), 2)  # Минимальный вес
     max_weight = round(last_records['weight'].max(), 2)  # Максимальный вес
 
@@ -66,8 +65,12 @@ def draw_plot(user_id, period='last'):
     plt.axhline(y=max_weight, color='green', linestyle=':', 
                 label=f'Макс: {max_weight} кг')
 
-    plt.axhline(y=avg_weight, color='gray', linestyle='--', 
-                label=f'Средний: {avg_weight} кг')
+    # Calculate and plot trend line
+    if len(plot_data) > 1:
+        x = np.arange(len(plot_data))
+        y = plot_data['weight'].values
+        m, b = np.polyfit(x, y, 1)
+        plt.plot(plot_data['date'], m*x + b, 'b--', label='Линия тренда')
 
     plt.xlabel('Дата')
     plt.ylabel('Вес (кг)')
