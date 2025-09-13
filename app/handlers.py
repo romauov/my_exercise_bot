@@ -245,6 +245,39 @@ async def list_workouts(message: Message):
     await message.answer(response, reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
 
 
+@router.message(Command('weight_save'))
+async def save_weight_data(message: Message):
+    user_id = message.from_user.id
+    weight_file_path = f'{user_id}_weights.json'
+    
+    try:
+        # Check if file exists
+        with open(weight_file_path, 'r') as f:
+            # If file exists, send it
+            weight_file = FSInputFile(weight_file_path)
+            await message.answer_document(weight_file, caption="Ваши данные о весе")
+    except FileNotFoundError:
+        await message.answer("❌ Файл с данными о весе не найден. Сначала добавьте данные с помощью команды /weight.")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка при отправке файла: {str(e)}")
+
+
+@router.message(Command('save_workout'))
+async def save_workout_data(message: Message):
+    workout_file_path = 'workout_cards.json'
+    
+    try:
+        # Check if file exists
+        with open(workout_file_path, 'r') as f:
+            # If file exists, send it
+            workout_file = FSInputFile(workout_file_path)
+            await message.answer_document(workout_file, caption="Ваши данные о тренировках")
+    except FileNotFoundError:
+        await message.answer("❌ Файл с данными о тренировках не найден.")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка при отправке файла: {str(e)}")
+
+
 @router.message(Command('weight'))
 async def update_weight(message: Message, state: FSMContext):
     await state.set_state(WeightUpdate.model)
