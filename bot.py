@@ -2,7 +2,7 @@ import logging
 import asyncio
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from app.handlers import router
+from app.handlers.main_handlers import router
 from app.settings import secrets as s
 from app.utils import set_schedule
 
