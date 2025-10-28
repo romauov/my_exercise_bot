@@ -33,7 +33,7 @@ async def select_workout_difficulty(message: Message, state: FSMContext):
 @router.message(WorkoutSelection.difficulty)
 async def send_random_workout(message: Message, state: FSMContext):
     difficulty = message.text.lower()
-    valid_difficulties = ["easy", "medium", "hard"]
+    valid_difficulties = ["morning", "easy", "medium", "hard"]
     
     if difficulty not in valid_difficulties:
         await message.answer(

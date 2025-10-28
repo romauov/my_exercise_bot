@@ -28,10 +28,11 @@ def difficulty_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                types.KeyboardButton(text="easy"),
-                types.KeyboardButton(text="medium")
+                types.KeyboardButton(text="morning"),
+                types.KeyboardButton(text="easy")
             ],
             [
+                types.KeyboardButton(text="medium"),
                 types.KeyboardButton(text="hard")
             ]
         ],
