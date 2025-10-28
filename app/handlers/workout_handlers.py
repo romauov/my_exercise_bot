@@ -41,7 +41,7 @@ async def add_workout_name(message: Message, state: FSMContext):
 async def add_workout_description(message: Message, state: FSMContext):
     await state.update_data(description=message.text)
     await state.set_state(WorkoutCreation.tags)
-    await message.answer("Введите теги тренировки через запятую (например: easy, medium, hard):")
+    await message.answer("Введите теги тренировки через запятую (morning, easy, medium, hard):")
 
 
 @router.message(WorkoutCreation.tags)
