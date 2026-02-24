@@ -21,24 +21,26 @@ class WeightPeriod(StatesGroup):
 router = Router()
 
 
-@router.message(Command('weight_save'))
+@router.message(Command("weight_save"))
 async def save_weight_data(message: Message):
     user_id = message.from_user.id
-    weight_file_path = f'{user_id}_weights.json'
-    
+    weight_file_path = f"{user_id}_weights.json"
+
     try:
         # Check if file exists
-        with open(weight_file_path, 'r') as f:
+        with open(weight_file_path, "r") as f:
             # If file exists, send it
             weight_file = FSInputFile(weight_file_path)
             await message.answer_document(weight_file, caption="Ваши данные о весе")
     except FileNotFoundError:
-        await message.answer("❌ Файл с данными о весе не найден. Сначала добавьте данные с помощью команды /weight.")
+        await message.answer(
+            "❌ Файл с данными о весе не найден. Сначала добавьте данные с помощью команды /weight."
+        )
     except Exception as e:
         await message.answer(f"❌ Ошибка при отправке файла: {str(e)}")
 
 
-@router.message(Command('weight'))
+@router.message(Command("weight"))
 async def update_weight(message: Message, state: FSMContext):
     await state.set_state(WeightUpdate.model)
     await message.answer("Введи вес в формате: 99.9")
@@ -49,24 +51,23 @@ async def save_weight(message: Message, state: FSMContext):
     try:
         weight = float(message.text)
         user_id = message.from_user.id
-        date = datetime.now().strftime('%d-%m-%Y')
+        date = datetime.now().strftime("%d-%m-%Y")
 
         save_weight_json(user_id, weight, date)
 
         await message.reply("Вес сохранен!")
         await state.clear()
-        photo_file = FSInputFile(path='plot.png')
+        photo_file = FSInputFile(path="plot.png")
         await message.answer_photo(photo=photo_file)
 
     except Exception as e:
-        await message.reply(e)
+        await message.reply(str(e))
 
 
 @router.message(Command("weight_"))
 async def cmd_weight(message: Message, state: FSMContext):
     await message.answer(
-        "🔄 Выберите период для отображения:",
-        reply_markup=period_keyboard()
+        "🔄 Выберите период для отображения:", reply_markup=period_keyboard()
     )
     await state.set_state(WeightPeriod.weight_period)
 
@@ -86,9 +87,7 @@ async def process_period(message: Message, state: FSMContext):
         photo = FSInputFile("plot.png")
         caption = format_weight_period_response(period)
         await message.answer_photo(
-            photo=photo,
-            caption=caption,
-            reply_markup=ReplyKeyboardRemove()
+            photo=photo, caption=caption, reply_markup=ReplyKeyboardRemove()
         )
     except Exception as e:
         await message.answer(f"⚠️ Ошибка: {str(e)}")
