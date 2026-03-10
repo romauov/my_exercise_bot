@@ -81,15 +81,16 @@ async def process_period(message: Message, state: FSMContext):
         await message.answer("❌ Неверный период! Выберите из предложенных:")
         return
 
-    try:
-        draw_plot(user_id=message.from_user.id, period=period)
+    result = draw_plot(user_id=message.from_user.id, period=period)
 
+    # Если draw_plot вернула строку - это сообщение об ошибке
+    if isinstance(result, str):
+        await message.answer(result, reply_markup=ReplyKeyboardRemove())
+    else:
         photo = FSInputFile("plot.png")
         caption = format_weight_period_response(period)
         await message.answer_photo(
             photo=photo, caption=caption, reply_markup=ReplyKeyboardRemove()
         )
-    except Exception as e:
-        await message.answer(f"⚠️ Ошибка: {str(e)}")
-    finally:
-        await state.clear()
+
+    await state.clear()
