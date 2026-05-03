@@ -21,7 +21,7 @@ class WorkoutSelection(StatesGroup):
 router = Router()
 
 
-@router.message(Command('workout'))
+@router.message(Command('kettlebell'))
 async def select_workout_difficulty(message: Message, state: FSMContext):
     await state.set_state(WorkoutSelection.difficulty)
     await message.answer(

@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import Command
 from aiogram.types import FSInputFile, Message, ReplyKeyboardRemove
-from app.draw_plot import draw_plot
+from app.draw_weight_plot import draw_plot
 from app.utils import save_weight_json
 from app.keyboard_utils import period_keyboard
 from app.response_formatters import format_weight_period_response
@@ -24,7 +24,7 @@ router = Router()
 @router.message(Command("weight_save"))
 async def save_weight_data(message: Message):
     user_id = message.from_user.id
-    weight_file_path = f"{user_id}_weights.json"
+    weight_file_path = f"data/{user_id}_weights.json"
 
     try:
         # Check if file exists

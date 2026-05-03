@@ -52,3 +52,31 @@ def workout_action_keyboard():
         ],
         resize_keyboard=True
     )
+
+
+def street_workout_number_keyboard():
+    """Create keyboard for street workout number input: 0-4, 5-9, Next, Done"""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                types.KeyboardButton(text="0"),
+                types.KeyboardButton(text="1"),
+                types.KeyboardButton(text="2"),
+                types.KeyboardButton(text="3"),
+                types.KeyboardButton(text="4")
+            ],
+            [
+                types.KeyboardButton(text="5"),
+                types.KeyboardButton(text="6"),
+                types.KeyboardButton(text="7"),
+                types.KeyboardButton(text="8"),
+                types.KeyboardButton(text="9")
+            ],
+            [
+                types.KeyboardButton(text="Next"),
+                types.KeyboardButton(text="Done")
+            ]
+        ],
+        resize_keyboard=True,
+        input_field_placeholder="Введите цифру"
+    )

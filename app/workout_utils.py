@@ -6,7 +6,7 @@ from datetime import datetime
 def get_random_workout_by_difficulty(difficulty):
     """Get a random workout by difficulty level"""
     try:
-        with open('workout_cards.json', 'r', encoding='utf-8') as f:
+        with open('data/workout_cards.json', 'r', encoding='utf-8') as f:
             workouts = json.load(f)
         
         filtered_workouts = [w for w in workouts if difficulty in w.get("tags", [])]
@@ -22,7 +22,7 @@ def update_workout_history(workout_id):
     """Update workout history and increment reps counter"""
     try:
         # Read current workouts
-        with open('workout_cards.json', 'r', encoding='utf-8') as f:
+        with open('data/workout_cards.json', 'r', encoding='utf-8') as f:
             workouts = json.load(f)
         
         # Find the workout and update its history and reps
@@ -37,7 +37,7 @@ def update_workout_history(workout_id):
                 break
         
         # Save updated workouts back to file
-        with open('workout_cards.json', 'w', encoding='utf-8') as f:
+        with open('data/workout_cards.json', 'w', encoding='utf-8') as f:
             json.dump(workouts, f, ensure_ascii=False, indent=2)
             
         return True
@@ -51,7 +51,7 @@ def add_workout_to_file(name, description, tags):
     try:
         # Read current workouts
         try:
-            with open('workout_cards.json', 'r', encoding='utf-8') as f:
+            with open('data/workout_cards.json', 'r', encoding='utf-8') as f:
                 workouts = json.load(f)
         except FileNotFoundError:
             workouts = []
@@ -73,7 +73,7 @@ def add_workout_to_file(name, description, tags):
         workouts.append(new_workout)
         
         # Save updated workouts back to file
-        with open('workout_cards.json', 'w', encoding='utf-8') as f:
+        with open('data/workout_cards.json', 'w', encoding='utf-8') as f:
             json.dump(workouts, f, ensure_ascii=False, indent=2)
             
         return new_workout
@@ -86,7 +86,7 @@ def remove_workout_from_file(workout_id):
     """Remove a workout from the workout cards file and reset IDs"""
     try:
         # Read current workouts
-        with open('workout_cards.json', 'r', encoding='utf-8') as f:
+        with open('data/workout_cards.json', 'r', encoding='utf-8') as f:
             workouts = json.load(f)
         
         # Find and remove workout
@@ -101,7 +101,7 @@ def remove_workout_from_file(workout_id):
             workout['id'] = str(i + 1)
         
         # Save updated workouts back to file
-        with open('workout_cards.json', 'w', encoding='utf-8') as f:
+        with open('data/workout_cards.json', 'w', encoding='utf-8') as f:
             json.dump(workouts, f, ensure_ascii=False, indent=2)
             
         return removed_workout
@@ -113,7 +113,7 @@ def remove_workout_from_file(workout_id):
 def get_all_workouts():
     """Get all workouts from the workout cards file"""
     try:
-        with open('workout_cards.json', 'r', encoding='utf-8') as f:
+        with open('data/workout_cards.json', 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
         return []

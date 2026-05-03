@@ -3,7 +3,7 @@ import random
 from datetime import datetime
 from aiogram import Bot
 from apscheduler.triggers.cron import CronTrigger
-from app.draw_plot import draw_plot
+from app.draw_weight_plot import draw_plot
 from app.settings import secrets as s
 
 
@@ -47,13 +47,13 @@ def save_weight_json(user_id, weight, date):
         "date": date
     }
     try:
-        with open(f'{user_id}_weights.json', 'r') as file:
+        with open(f'data/{user_id}_weights.json', 'r') as file:
             weights = json.load(file)
     except FileNotFoundError:
         weights = []
 
     weights.append(data)
 
-    with open(f'{user_id}_weights.json', 'w') as file:
+    with open(f'data/{user_id}_weights.json', 'w') as file:
         json.dump(weights, file, indent=4)
     draw_plot(user_id=user_id)
