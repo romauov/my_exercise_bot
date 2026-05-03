@@ -22,12 +22,12 @@ def get_full_schedule(schedule, timeshift):
 async def send_scheduled_message(bot: Bot):
     chat_id = s.my_tg_id
     await bot.send_message(chat_id=chat_id, 
-                        #    text="Делай " + pick_exercises('exercises_list.json') + " и " + pick_exercises('face_exercises.json')
-                        text=pick_exercises('face_exercises.json'))
+                        #    text="Делай " + pick_exercises('data/exercises_list.json') + " и " + pick_exercises('data/face_exercises.json')
+                        text=pick_exercises('data/face_exercises.json'))
     
 def set_schedule(scheduler, bot):
     
-    with open('schedule.json') as f:
+    with open('data/schedule.json') as f:
         schedule = json.load(f)
         
     full_schedule = get_full_schedule(schedule, timeshift=4)
