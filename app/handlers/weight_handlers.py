@@ -1,17 +1,17 @@
 from datetime import datetime
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import Command
-from aiogram.types import FSInputFile, Message, ReplyKeyboardRemove
+from aiogram.types import FSInputFile, Message, ReplyKeyboardRemove, CallbackQuery
 from app.draw_weight_plot import draw_plot
 from app.utils import save_weight_json
-from app.keyboard_utils import period_keyboard
+from app.keyboard_utils import period_keyboard, weight_input_keyboard
 from app.response_formatters import format_weight_period_response
 
 
 class WeightUpdate(StatesGroup):
-    model = State()
+    input_state = State()
 
 
 class WeightPeriod(StatesGroup):
@@ -21,15 +21,103 @@ class WeightPeriod(StatesGroup):
 router = Router()
 
 
+def build_weight_display(current_weight: str) -> str:
+    weight_text = current_weight if current_weight else "0"
+    return f"Вес: {weight_text}"
+
+
+@router.message(Command("weight"))
+async def update_weight(message: Message, state: FSMContext):
+    await state.set_state(WeightUpdate.input_state)
+    await state.update_data(current_weight='')
+    await message.answer(
+        "Введи вес:",
+        reply_markup=weight_input_keyboard()
+    )
+
+
+@router.callback_query(F.data.startswith("weight_"))
+async def handle_weight_callback(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_data = await state.get_data()
+    current_weight = user_data.get('current_weight', '')
+    
+    current_state = await state.get_state()
+    if current_state != WeightUpdate.input_state.state:
+        await callback.answer()
+        return
+    
+    action = callback.data[7:]
+    
+    if action == "back":
+        current_weight = current_weight[:-1] if current_weight else ''
+        await state.update_data(current_weight=current_weight)
+        await callback.message.edit_text(
+            build_weight_display(current_weight),
+            reply_markup=weight_input_keyboard()
+        )
+        await callback.answer()
+        return
+    
+    if action == "dot":
+        if '.' not in current_weight:
+            current_weight += '.'
+        await state.update_data(current_weight=current_weight)
+        await callback.message.edit_text(
+            build_weight_display(current_weight),
+            reply_markup=weight_input_keyboard()
+        )
+        await callback.answer()
+        return
+    
+    if action == "done":
+        if not current_weight or current_weight == '.':
+            await callback.answer("Введите вес", show_alert=True)
+            return
+        
+        try:
+            weight = float(current_weight)
+            date = datetime.now().strftime("%d-%m-%Y")
+            save_weight_json(user_id, weight, date)
+            
+            await callback.message.edit_text(
+                f"✅ Вес {weight} сохранен!",
+                reply_markup=None
+            )
+            
+            result = draw_plot(user_id=user_id)
+            
+            if isinstance(result, str):
+                await callback.message.answer(result, reply_markup=ReplyKeyboardRemove())
+            else:
+                photo = FSInputFile("data/plot.png")
+                await callback.message.answer_photo(photo, caption=f"Вес за последние 14 дней")
+            
+        except Exception as e:
+            await callback.message.answer(f"Ошибка: {str(e)}")
+        
+        await callback.answer()
+        await state.clear()
+        return
+    
+    if action.isdigit():
+        if len(current_weight) < 6:
+            current_weight += action
+            await state.update_data(current_weight=current_weight)
+            await callback.message.edit_text(
+                build_weight_display(current_weight),
+                reply_markup=weight_input_keyboard()
+            )
+        await callback.answer()
+
+
 @router.message(Command("weight_save"))
 async def save_weight_data(message: Message):
     user_id = message.from_user.id
     weight_file_path = f"data/{user_id}_weights.json"
 
     try:
-        # Check if file exists
         with open(weight_file_path, "r") as f:
-            # If file exists, send it
             weight_file = FSInputFile(weight_file_path)
             await message.answer_document(weight_file, caption="Ваши данные о весе")
     except FileNotFoundError:
@@ -38,30 +126,6 @@ async def save_weight_data(message: Message):
         )
     except Exception as e:
         await message.answer(f"❌ Ошибка при отправке файла: {str(e)}")
-
-
-@router.message(Command("weight"))
-async def update_weight(message: Message, state: FSMContext):
-    await state.set_state(WeightUpdate.model)
-    await message.answer("Введи вес в формате: 99.9")
-
-
-@router.message(WeightUpdate.model)
-async def save_weight(message: Message, state: FSMContext):
-    try:
-        weight = float(message.text)
-        user_id = message.from_user.id
-        date = datetime.now().strftime("%d-%m-%Y")
-
-        save_weight_json(user_id, weight, date)
-
-        await message.reply("Вес сохранен!")
-        await state.clear()
-        photo_file = FSInputFile(path="plot.png")
-        await message.answer_photo(photo=photo_file)
-
-    except Exception as e:
-        await message.reply(str(e))
 
 
 @router.message(Command("weight_"))
@@ -83,11 +147,10 @@ async def process_period(message: Message, state: FSMContext):
 
     result = draw_plot(user_id=message.from_user.id, period=period)
 
-    # Если draw_plot вернула строку - это сообщение об ошибке
     if isinstance(result, str):
         await message.answer(result, reply_markup=ReplyKeyboardRemove())
     else:
-        photo = FSInputFile("plot.png")
+        photo = FSInputFile("data/plot.png")
         caption = format_weight_period_response(period)
         await message.answer_photo(
             photo=photo, caption=caption, reply_markup=ReplyKeyboardRemove()

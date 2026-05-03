@@ -1,5 +1,5 @@
 from aiogram import types
-from aiogram.types import ReplyKeyboardMarkup
+from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 
 
 def period_keyboard():
@@ -54,29 +54,65 @@ def workout_action_keyboard():
     )
 
 
-def street_workout_number_keyboard():
-    """Create keyboard for street workout number input: 0-4, 5-9, Next, Done"""
-    return ReplyKeyboardMarkup(
-        keyboard=[
+def street_workout_number_keyboard(exercise: str = "pullups") -> InlineKeyboardMarkup:
+    """Create inline keyboard for street workout number input"""
+    prefix = f"{exercise}_"
+    
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
             [
-                types.KeyboardButton(text="0"),
-                types.KeyboardButton(text="1"),
-                types.KeyboardButton(text="2"),
-                types.KeyboardButton(text="3"),
-                types.KeyboardButton(text="4")
+                InlineKeyboardButton(text="7", callback_data=f"{prefix}7"),
+                InlineKeyboardButton(text="8", callback_data=f"{prefix}8"),
+                InlineKeyboardButton(text="9", callback_data=f"{prefix}9"),
             ],
             [
-                types.KeyboardButton(text="5"),
-                types.KeyboardButton(text="6"),
-                types.KeyboardButton(text="7"),
-                types.KeyboardButton(text="8"),
-                types.KeyboardButton(text="9")
+                InlineKeyboardButton(text="4", callback_data=f"{prefix}4"),
+                InlineKeyboardButton(text="5", callback_data=f"{prefix}5"),
+                InlineKeyboardButton(text="6", callback_data=f"{prefix}6"),
             ],
             [
-                types.KeyboardButton(text="Next"),
-                types.KeyboardButton(text="Done")
-            ]
-        ],
-        resize_keyboard=True,
-        input_field_placeholder="Введите цифру"
+                InlineKeyboardButton(text="1", callback_data=f"{prefix}1"),
+                InlineKeyboardButton(text="2", callback_data=f"{prefix}2"),
+                InlineKeyboardButton(text="3", callback_data=f"{prefix}3"),
+            ],
+            [
+                InlineKeyboardButton(text="0", callback_data=f"{prefix}0"),
+                InlineKeyboardButton(text="⌫", callback_data=f"{prefix}back"),
+                InlineKeyboardButton(text="Next", callback_data=f"{prefix}next"),
+            ],
+            [
+                InlineKeyboardButton(text="Done", callback_data=f"{prefix}done"),
+            ],
+        ]
+    )
+
+
+def weight_input_keyboard() -> InlineKeyboardMarkup:
+    """Create inline keyboard for weight input"""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="7", callback_data="weight_7"),
+                InlineKeyboardButton(text="8", callback_data="weight_8"),
+                InlineKeyboardButton(text="9", callback_data="weight_9"),
+            ],
+            [
+                InlineKeyboardButton(text="4", callback_data="weight_4"),
+                InlineKeyboardButton(text="5", callback_data="weight_5"),
+                InlineKeyboardButton(text="6", callback_data="weight_6"),
+            ],
+            [
+                InlineKeyboardButton(text="1", callback_data="weight_1"),
+                InlineKeyboardButton(text="2", callback_data="weight_2"),
+                InlineKeyboardButton(text="3", callback_data="weight_3"),
+            ],
+            [
+                InlineKeyboardButton(text=".", callback_data="weight_dot"),
+                InlineKeyboardButton(text="0", callback_data="weight_0"),
+                InlineKeyboardButton(text="⌫", callback_data="weight_back"),
+            ],
+            [
+                InlineKeyboardButton(text="Done", callback_data="weight_done"),
+            ],
+        ]
     )

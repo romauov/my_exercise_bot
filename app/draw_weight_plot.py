@@ -105,7 +105,7 @@ def draw_plot(user_id, period='last'):
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.legend()
-    plt.savefig('plot.png')
+    plt.savefig('data/plot.png')
     plt.close()
     
     return None

@@ -51,7 +51,8 @@ def save_weight_json(user_id, weight, date):
             weights = json.load(file)
     except FileNotFoundError:
         weights = []
-
+    
+    weights = [w for w in weights if w.get('date') != date]
     weights.append(data)
 
     with open(f'data/{user_id}_weights.json', 'w') as file:

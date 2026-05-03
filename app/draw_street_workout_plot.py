@@ -55,9 +55,9 @@ def draw_street_workout_plot(user_id, exercise):
     plt.tight_layout()
     
     if exercise == 'pullups':
-        plt.savefig('street_workout_pullups.png')
+        plt.savefig('data/street_workout_pullups.png')
     else:
-        plt.savefig('street_workout_pushups.png')
+        plt.savefig('data/street_workout_pushups.png')
     
     plt.close()
 

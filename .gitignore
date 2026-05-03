@@ -1,3 +1,6 @@
 .env
 __pycache__/
 workout_cards.json
+data/
+*.png
+!data/.gitkeep
