@@ -18,12 +18,12 @@ class WeightPeriod(StatesGroup):
     weight_period = State()
 
 
+def build_weight_display_fixed(current_weight: str) -> str:
+    weight_text = current_weight if current_weight else "—"
+    return f"Сегодняшний вес:\n{weight_text}"
+
+
 router = Router()
-
-
-def build_weight_display(current_weight: str) -> str:
-    weight_text = current_weight if current_weight else "0"
-    return f"Вес: {weight_text}"
 
 
 @router.message(Command("weight"))
@@ -31,7 +31,7 @@ async def update_weight(message: Message, state: FSMContext):
     await state.set_state(WeightUpdate.input_state)
     await state.update_data(current_weight='')
     await message.answer(
-        "Введи вес:",
+        build_weight_display_fixed(""),
         reply_markup=weight_input_keyboard()
     )
 
@@ -53,7 +53,7 @@ async def handle_weight_callback(callback: CallbackQuery, state: FSMContext):
         current_weight = current_weight[:-1] if current_weight else ''
         await state.update_data(current_weight=current_weight)
         await callback.message.edit_text(
-            build_weight_display(current_weight),
+            build_weight_display_fixed(current_weight),
             reply_markup=weight_input_keyboard()
         )
         await callback.answer()
@@ -64,7 +64,7 @@ async def handle_weight_callback(callback: CallbackQuery, state: FSMContext):
             current_weight += '.'
         await state.update_data(current_weight=current_weight)
         await callback.message.edit_text(
-            build_weight_display(current_weight),
+            build_weight_display_fixed(current_weight),
             reply_markup=weight_input_keyboard()
         )
         await callback.answer()
@@ -105,7 +105,7 @@ async def handle_weight_callback(callback: CallbackQuery, state: FSMContext):
             current_weight += action
             await state.update_data(current_weight=current_weight)
             await callback.message.edit_text(
-                build_weight_display(current_weight),
+                build_weight_display_fixed(current_weight),
                 reply_markup=weight_input_keyboard()
             )
         await callback.answer()
