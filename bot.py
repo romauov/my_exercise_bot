@@ -15,7 +15,7 @@ async def main():
     dp = Dispatcher()
     dp.include_router(router)
 
-    set_schedule(scheduler, bot)
+    # set_schedule(scheduler, bot)
     schedule_random_quotes(scheduler, bot)
     
     await dp.start_polling(bot)
