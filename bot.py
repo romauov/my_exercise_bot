@@ -17,6 +17,7 @@ async def main():
 
     # set_schedule(scheduler, bot)
     schedule_random_quotes(scheduler, bot)
+    scheduler.start()
     
     await dp.start_polling(bot)
 
