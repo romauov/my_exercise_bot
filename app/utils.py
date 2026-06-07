@@ -1,10 +1,13 @@
 import json
 import random
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from aiogram import Bot
 from apscheduler.triggers.cron import CronTrigger
 from app.draw_weight_plot import draw_plot
 from app.settings import secrets as s
+
+TZ = ZoneInfo("Europe/Samara")
 
 
 def pick_exercises(path):
@@ -79,7 +82,7 @@ def schedule_random_quotes(scheduler, bot):
 
         messages_count = random.randint(2, 5)
 
-        now = datetime.now()
+        now = datetime.now(TZ)
         start_time = now.replace(hour=10, minute=0, second=0, microsecond=0)
         end_time = now.replace(hour=22, minute=0, second=0, microsecond=0)
 
@@ -98,4 +101,4 @@ def schedule_random_quotes(scheduler, bot):
 
     schedule_next_day_jobs()
 
-    scheduler.add_job(schedule_next_day_jobs, 'cron', hour=0, minute=1)
+    scheduler.add_job(schedule_next_day_jobs, 'cron', hour=0, minute=1, timezone=TZ)
