@@ -41,16 +41,11 @@ async def update_weight(message: Message, state: FSMContext):
     )
 
 
-@router.callback_query(F.data.startswith("weight_"))
+@router.callback_query(F.data.startswith("weight_"), WeightUpdate.input_state)
 async def handle_weight_callback(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_data = await state.get_data()
     current_weight = user_data.get('current_weight', '')
-    
-    current_state = await state.get_state()
-    if current_state != WeightUpdate.input_state.state:
-        await callback.answer()
-        return
     
     action = callback.data[7:]
     
@@ -101,8 +96,19 @@ async def handle_weight_callback(callback: CallbackQuery, state: FSMContext):
         except Exception as e:
             await callback.message.answer(f"Ошибка: {str(e)}")
         
+        await state.clear()
         await callback.answer()
-    await state.clear()
+        return
+    
+    if action.isdigit():
+        if len(current_weight) < 6:
+            current_weight += action
+            await state.update_data(current_weight=current_weight)
+            await callback.message.edit_text(
+                build_weight_display_fixed(current_weight),
+                reply_markup=weight_input_keyboard()
+            )
+        await callback.answer()
 
 
 @router.message(Command("weight_fill"))
@@ -163,13 +169,8 @@ async def handle_date_callback(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
 
 
-@router.callback_query(F.data.startswith("weight_"))
+@router.callback_query(F.data.startswith("weight_"), FillWeightGap.weight_input)
 async def handle_fill_weight_callback(callback: CallbackQuery, state: FSMContext):
-    current_state = await state.get_state()
-    if current_state != FillWeightGap.weight_input.state:
-        await callback.answer()
-        return
-
     user_data = await state.get_data()
     current_weight = user_data.get('current_weight', '')
     fill_date = user_data.get('fill_date', '')
