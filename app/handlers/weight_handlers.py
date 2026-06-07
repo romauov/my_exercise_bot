@@ -163,8 +163,13 @@ async def handle_date_callback(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
 
 
-@router.callback_query(F.data.startswith("weight_"), FillWeightGap.weight_input)
+@router.callback_query(F.data.startswith("weight_"))
 async def handle_fill_weight_callback(callback: CallbackQuery, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state != FillWeightGap.weight_input.state:
+        await callback.answer()
+        return
+
     user_data = await state.get_data()
     current_weight = user_data.get('current_weight', '')
     fill_date = user_data.get('fill_date', '')
