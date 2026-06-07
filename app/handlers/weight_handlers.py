@@ -14,10 +14,6 @@ class WeightUpdate(StatesGroup):
     input_state = State()
 
 
-class WeightPeriod(StatesGroup):
-    weight_period = State()
-
-
 class FillWeightGap(StatesGroup):
     date_input = State()
     weight_input = State()
@@ -273,27 +269,22 @@ async def cmd_weight(message: Message, state: FSMContext):
     await message.answer(
         "🔄 Выберите период для отображения:", reply_markup=period_keyboard()
     )
-    await state.set_state(WeightPeriod.weight_period)
 
 
-@router.message(WeightPeriod.weight_period)
-async def process_period(message: Message, state: FSMContext):
-    period = message.text.lower()
-    valid_periods = ["last", "month", "quarter", "year", "all"]
+@router.callback_query(F.data.startswith("period_"))
+async def process_period_callback(callback: CallbackQuery, state: FSMContext):
+    period = callback.data[7:]
+    user_id = callback.from_user.id
 
-    if period not in valid_periods:
-        await message.answer("❌ Неверный период! Выберите из предложенных:")
-        return
-
-    result = draw_plot(user_id=message.from_user.id, period=period)
+    result = draw_plot(user_id=user_id, period=period)
 
     if isinstance(result, str):
-        await message.answer(result, reply_markup=ReplyKeyboardRemove())
+        await callback.message.edit_text(result)
     else:
         photo = FSInputFile("data/plot.png")
-        caption = format_weight_period_response(period)
-        await message.answer_photo(
-            photo=photo, caption=caption, reply_markup=ReplyKeyboardRemove()
+        await callback.message.answer_photo(
+            photo=photo, caption=format_weight_period_response(period)
         )
 
+    await callback.answer()
     await state.clear()

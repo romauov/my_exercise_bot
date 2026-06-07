@@ -2,24 +2,21 @@ from aiogram import types
 from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 
 
-def period_keyboard():
-    """Create keyboard for weight period selection"""
-    return ReplyKeyboardMarkup(
-        keyboard=[
+def period_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
             [
-                types.KeyboardButton(text="last"),
-                types.KeyboardButton(text="month")
+                InlineKeyboardButton(text="Последние 14 дней", callback_data="period_last"),
+                InlineKeyboardButton(text="Месяц", callback_data="period_month"),
             ],
             [
-                types.KeyboardButton(text="quarter"),
-                types.KeyboardButton(text="year")
+                InlineKeyboardButton(text="Квартал", callback_data="period_quarter"),
+                InlineKeyboardButton(text="Год", callback_data="period_year"),
             ],
             [
-                types.KeyboardButton(text="all")
-            ]
-        ],
-        resize_keyboard=True,
-        input_field_placeholder="Выберите период"
+                InlineKeyboardButton(text="Всё время", callback_data="period_all"),
+            ],
+        ]
     )
 
 
