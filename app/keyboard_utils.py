@@ -87,6 +87,44 @@ def street_workout_number_keyboard(exercise: str = "pullups") -> InlineKeyboardM
     )
 
 
+def continue_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Да", callback_data="continue_yes"),
+                InlineKeyboardButton(text="Нет", callback_data="continue_no"),
+            ],
+        ]
+    )
+
+
+def date_input_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="7", callback_data="date_7"),
+                InlineKeyboardButton(text="8", callback_data="date_8"),
+                InlineKeyboardButton(text="9", callback_data="date_9"),
+            ],
+            [
+                InlineKeyboardButton(text="4", callback_data="date_4"),
+                InlineKeyboardButton(text="5", callback_data="date_5"),
+                InlineKeyboardButton(text="6", callback_data="date_6"),
+            ],
+            [
+                InlineKeyboardButton(text="1", callback_data="date_1"),
+                InlineKeyboardButton(text="2", callback_data="date_2"),
+                InlineKeyboardButton(text="3", callback_data="date_3"),
+            ],
+            [
+                InlineKeyboardButton(text="⌫", callback_data="date_back"),
+                InlineKeyboardButton(text="0", callback_data="date_0"),
+                InlineKeyboardButton(text="Done", callback_data="date_done"),
+            ],
+        ]
+    )
+
+
 def weight_input_keyboard() -> InlineKeyboardMarkup:
     """Create inline keyboard for weight input"""
     return InlineKeyboardMarkup(

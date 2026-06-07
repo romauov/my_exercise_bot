@@ -6,7 +6,7 @@ from aiogram.filters import Command
 from aiogram.types import FSInputFile, Message, ReplyKeyboardRemove, CallbackQuery
 from app.draw_weight_plot import draw_plot
 from app.utils import save_weight_json
-from app.keyboard_utils import period_keyboard, weight_input_keyboard
+from app.keyboard_utils import period_keyboard, weight_input_keyboard, date_input_keyboard, continue_keyboard
 from app.response_formatters import format_weight_period_response
 
 
@@ -16,6 +16,11 @@ class WeightUpdate(StatesGroup):
 
 class WeightPeriod(StatesGroup):
     weight_period = State()
+
+
+class FillWeightGap(StatesGroup):
+    date_input = State()
+    weight_input = State()
 
 
 def build_weight_display_fixed(current_weight: str) -> str:
@@ -97,18 +102,147 @@ async def handle_weight_callback(callback: CallbackQuery, state: FSMContext):
             await callback.message.answer(f"Ошибка: {str(e)}")
         
         await callback.answer()
-        await state.clear()
+    await state.clear()
+
+
+@router.message(Command("weight_fill"))
+async def cmd_weight_fill(message: Message, state: FSMContext):
+    await state.set_state(FillWeightGap.date_input)
+    await state.update_data(fill_date='')
+    await message.answer(
+        "Введи дату (ДДММГГГГ):",
+        reply_markup=date_input_keyboard()
+    )
+
+
+@router.callback_query(F.data.startswith("date_"), FillWeightGap.date_input)
+async def handle_date_callback(callback: CallbackQuery, state: FSMContext):
+    user_data = await state.get_data()
+    current = user_data.get('fill_date', '')
+    action = callback.data[5:]
+
+    if action == "back":
+        current = current[:-1] if current else ''
+        await state.update_data(fill_date=current)
+        await callback.message.edit_text(
+            f"Введи дату (ДДММГГГГ):\n{current if current else '—'}",
+            reply_markup=date_input_keyboard()
+        )
+        await callback.answer()
         return
-    
+
+    if action == "done":
+        if len(current) != 8:
+            await callback.answer("Введи 8 цифр (ДДММГГГГ)", show_alert=True)
+            return
+        try:
+            date_obj = datetime.strptime(current, "%d%m%Y")
+        except ValueError:
+            await callback.answer("Неверная дата", show_alert=True)
+            return
+
+        formatted_date = date_obj.strftime("%d-%m-%Y")
+        await state.update_data(fill_date=formatted_date)
+        await state.set_state(FillWeightGap.weight_input)
+        await state.update_data(current_weight='')
+        await callback.message.edit_text(
+            f"Дата: {formatted_date}\nВведи вес:",
+            reply_markup=weight_input_keyboard()
+        )
+        await callback.answer()
+        return
+
+    if action.isdigit():
+        if len(current) < 8:
+            current += action
+            await state.update_data(fill_date=current)
+            await callback.message.edit_text(
+                f"Введи дату (ДДММГГГГ):\n{current if current else '—'}",
+                reply_markup=date_input_keyboard()
+            )
+        await callback.answer()
+
+
+@router.callback_query(F.data.startswith("weight_"), FillWeightGap.weight_input)
+async def handle_fill_weight_callback(callback: CallbackQuery, state: FSMContext):
+    user_data = await state.get_data()
+    current_weight = user_data.get('current_weight', '')
+    fill_date = user_data.get('fill_date', '')
+
+    action = callback.data[7:]
+
+    if action == "back":
+        current_weight = current_weight[:-1] if current_weight else ''
+        await state.update_data(current_weight=current_weight)
+        await callback.message.edit_text(
+            f"Дата: {fill_date}\nВведи вес:\n{current_weight if current_weight else '—'}",
+            reply_markup=weight_input_keyboard()
+        )
+        await callback.answer()
+        return
+
+    if action == "dot":
+        if '.' not in current_weight:
+            current_weight += '.'
+        await state.update_data(current_weight=current_weight)
+        await callback.message.edit_text(
+            f"Дата: {fill_date}\nВведи вес:\n{current_weight if current_weight else '—'}",
+            reply_markup=weight_input_keyboard()
+        )
+        await callback.answer()
+        return
+
+    if action == "done":
+        if not current_weight or current_weight == '.':
+            await callback.answer("Введите вес", show_alert=True)
+            return
+
+        try:
+            weight = float(current_weight)
+            save_weight_json(callback.from_user.id, weight, fill_date)
+
+            await callback.message.edit_text(
+                f"✅ Вес {weight} на {fill_date} сохранен!",
+                reply_markup=None
+            )
+            await state.update_data(fill_date='', current_weight='')
+            await callback.message.answer(
+                "Добавить ещё?",
+                reply_markup=continue_keyboard()
+            )
+        except Exception as e:
+            await callback.message.answer(f"Ошибка: {str(e)}")
+
+        await callback.answer()
+        return
+
     if action.isdigit():
         if len(current_weight) < 6:
             current_weight += action
             await state.update_data(current_weight=current_weight)
             await callback.message.edit_text(
-                build_weight_display_fixed(current_weight),
+                f"Дата: {fill_date}\nВведи вес:\n{current_weight if current_weight else '—'}",
                 reply_markup=weight_input_keyboard()
             )
         await callback.answer()
+
+
+@router.callback_query(F.data.startswith("continue_"))
+async def handle_continue_callback(callback: CallbackQuery, state: FSMContext):
+    action = callback.data[9:]
+
+    if action == "yes":
+        await state.set_state(FillWeightGap.date_input)
+        await state.update_data(fill_date='')
+        await callback.message.edit_text(
+            "Введи дату (ДДММГГГГ):",
+            reply_markup=date_input_keyboard()
+        )
+    else:
+        await state.clear()
+        await callback.message.edit_text("Готово!")
+
+    await callback.answer()
 
 
 @router.message(Command("weight_save"))
