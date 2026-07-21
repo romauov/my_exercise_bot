@@ -4,10 +4,24 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from aiogram import Bot
 from apscheduler.triggers.cron import CronTrigger
+from openai import AsyncOpenAI
 from app.draw_weight_plot import draw_plot
 from app.settings import secrets as s
 
 TZ = ZoneInfo("Europe/Samara")
+
+_client = None
+def get_client():
+    global _client
+    if _client is None:
+        _client = AsyncOpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=s.openrouter_api_key,
+            default_headers={
+                "HTTP-Referer": "https://github.com/romauov/my_exercise_bot",
+            },
+        )
+    return _client
 
 
 def pick_exercises(path):
@@ -68,9 +82,33 @@ def get_quotes():
         return json.load(f)
 
 
-async def send_random_quote(bot: Bot):
+async def generate_quote():
     quotes = get_quotes()
-    quote = random.choice(quotes)
+    examples = "\n".join(f"- {q}" for q in quotes)
+    prompt = (
+        "Сгенерируй короткую мотивирующую цитату (1-2 предложения) "
+        "про спорт, тренировки, здоровье, похожую по стилю на эти примеры:\n"
+        f"{examples}\n\n"
+        "Только текст цитаты, без кавычек и пояснений."
+    )
+    messages = [{"role": "user", "content": prompt}]
+
+    for model in ["google/gemini-2.0-flash-001", "openai/gpt-4o-mini"]:
+        try:
+            response = await get_client().chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=2.0,
+                max_tokens=200,
+            )
+            return response.choices[0].message.content.strip()
+        except Exception:
+            continue
+    return "💪 Нет мотивации, но тренировка всё равно будет!"
+
+
+async def send_random_quote(bot: Bot):
+    quote = await generate_quote()
     await bot.send_message(chat_id=s.my_tg_id, text=quote)
 
 
