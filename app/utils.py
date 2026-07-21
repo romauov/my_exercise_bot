@@ -98,7 +98,7 @@ async def generate_quote():
             response = await get_client().chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=2.0,
+                temperature=0.9,
                 max_tokens=200,
             )
             return response.choices[0].message.content.strip()
