@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+from datetime import datetime
 
 
 def draw_street_workout_plot(user_id, exercise):
@@ -30,7 +31,7 @@ def draw_street_workout_plot(user_id, exercise):
     sorted_data = sorted_data[::-1]
 
     for entry in sorted_data:
-        dates.append(entry['date'][-5:])
+        dates.append(datetime.strptime(entry['date'], '%d-%m-%Y').strftime('%Y-%m-%d'))
         sets = entry['sets']
         sets_counts.append(len(sets))
         avgs.append(round(sum(sets) / len(sets), 2))
