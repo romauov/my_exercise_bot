@@ -4,7 +4,7 @@ from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.handlers.main_handlers import router
 from app.settings import secrets as s
-from app.utils import set_schedule, schedule_random_quotes
+from app.utils import set_schedule
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,7 +16,6 @@ async def main():
     dp.include_router(router)
 
     # set_schedule(scheduler, bot)
-    schedule_random_quotes(scheduler, bot)
     scheduler.start()
     
     await dp.start_polling(bot)
