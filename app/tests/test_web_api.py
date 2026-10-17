@@ -121,3 +121,67 @@ def test_summary_empty_is_null(client, workspace):
     r = client.get("/api/summary", headers=h(token))
 
     assert r.json() is None
+
+
+def test_patch_date_collision_returns_409(client, workspace):
+    client, token = client
+    db = pytest.importorskip("app.db")
+    db.init_db()
+    db.upsert_weight("2025-01-10", 70.0)
+    db.upsert_weight("2025-01-11", 71.0)
+    first_id = db.get_weights("all")[0]["id"]
+
+    r = client.patch(
+        f"/api/weights/{first_id}", headers=h(token), json={"date": "2025-01-11"}
+    )
+
+    assert r.status_code == 409
+
+
+def test_patch_weight_collision_returns_409(client, workspace):
+    client, token = client
+    db = pytest.importorskip("app.db")
+    db.init_db()
+    db.upsert_weight("2025-01-10", 70.0)
+    db.upsert_weight("2025-01-11", 71.0)
+    rows = db.get_weights("all")
+
+    r = client.patch(
+        f"/api/weights/{rows[1]['id']}?x=1",
+        headers=h(token),
+        json={"date": "2025-01-10", "weight": 71.5},
+    )
+
+    assert r.status_code == 409
+
+
+def test_post_missing_fields_returns_422(client, workspace):
+    client, token = client
+
+    assert client.post("/api/weights", headers=h(token), json={"date": "2025-01-10"}).status_code == 422
+    assert client.post("/api/weights", headers=h(token), json={"weight": 70.0}).status_code == 422
+    assert client.post("/api/weights", headers=h(token), json={"date": "2025-01-10", "weight": "abc"}).status_code == 422
+
+
+def test_post_invalid_date_returns_422(client, workspace):
+    client, token = client
+
+    r = client.post(
+        "/api/weights", headers=h(token), json={"date": "31-02-2025", "weight": 70.0}
+    )
+
+    assert r.status_code == 422
+
+
+def test_patch_invalid_weight_returns_422(client, workspace):
+    client, token = client
+    db = pytest.importorskip("app.db")
+    db.init_db()
+    db.upsert_weight("2025-01-10", 70.0)
+    weight_id = db.get_weights("all")[0]["id"]
+
+    r = client.patch(
+        f"/api/weights/{weight_id}", headers=h(token), json={"weight": "abc"}
+    )
+
+    assert r.status_code == 422

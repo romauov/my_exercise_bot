@@ -51,16 +51,11 @@ def migrate_from_json():
         for entry in entries:
             date_iso, weight = _parse_entry(entry)
             with _connect() as conn:
-                exists = conn.execute(
-                    "SELECT 1 FROM weights WHERE date = ?", (date_iso,)
-                ).fetchone()
-                if exists:
-                    continue
-                conn.execute(
-                    "INSERT INTO weights(date, weight) VALUES (?, ?)",
+                cursor = conn.execute(
+                    "INSERT OR IGNORE INTO weights(date, weight) VALUES (?, ?)",
                     (date_iso, weight),
                 )
-                added += 1
+                added += cursor.rowcount
     return added
 
 

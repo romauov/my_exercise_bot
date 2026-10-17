@@ -83,6 +83,19 @@ def test_upsert_overwrites_same_date(workspace):
     assert read_rows(workspace) == [("2025-01-10", 71.5)]
 
 
+def test_migrate_keeps_existing_rows_untouched(workspace):
+    """A row already in the DB (e.g. written by the bot while another
+    container already migrated) must never be clobbered by the migration."""
+    write_weights_file(workspace, [{"weight": 60.0, "date": "10-01-2025"}])
+    db.init_db()
+    db.upsert_weight("2025-01-10", 70.0)
+
+    added = db.migrate_from_json()
+
+    assert added == 0
+    assert read_rows(workspace) == [("2025-01-10", 70.0)]
+
+
 def test_get_weights_period_filter(workspace):
     today = date.today()
     db.init_db()

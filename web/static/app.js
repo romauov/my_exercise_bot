@@ -13,6 +13,12 @@ const $ = (id) => document.getElementById(id);
 function show(id) { $(id).classList.remove("hidden"); }
 function hide(id) { $(id).classList.add("hidden"); }
 
+function todayLocalISO() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 async function api(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -123,7 +129,8 @@ async function openAddModal() {
   } catch (e) {
     if (e.message === "unauthorized") return;
   }
-  $("add-date").value = new Date().toISOString().slice(0, 10);
+  hide("add-error");
+  $("add-date").value = todayLocalISO();
   $("add-weight").value = lastWeight;
   show("add-overlay");
 }
@@ -136,6 +143,10 @@ async function saveNewWeight() {
   if (res.ok) {
     hide("add-overlay");
     loadPeriod();
+  } else {
+    showError("add-error", res.status === 409
+      ? "На эту дату уже есть запись"
+      : "Ошибка сохранения");
   }
 }
 
@@ -147,6 +158,7 @@ function openEditModal(record) {
   editId = record.id;
   $("edit-date").value = record.date;
   $("edit-weight").value = record.weight.toFixed(1);
+  hide("edit-error");
   show("edit-overlay");
 }
 
@@ -161,14 +173,26 @@ async function saveEditWeight() {
   if (res.ok) {
     hide("edit-overlay");
     loadPeriod();
+  } else {
+    showError("edit-error", res.status === 409
+      ? "На эту дату уже есть запись"
+      : "Ошибка сохранения");
   }
 }
 
+function showError(id, message) {
+  $(id).textContent = message;
+  show(id);
+}
+
 async function deleteWeight() {
+  if (!confirm("Удалить запись?")) return;
   const res = await api(`/weights/${editId}`, { method: "DELETE" });
   if (res.ok) {
     hide("edit-overlay");
     loadPeriod();
+  } else {
+    showError("edit-error", "Ошибка удаления");
   }
 }
 

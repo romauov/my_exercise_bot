@@ -1,7 +1,9 @@
 import os
+import sqlite3
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from app.db import (
     delete_weight,
@@ -15,6 +17,16 @@ from app.db import (
 )
 
 app = FastAPI(title="Weight control")
+
+
+class WeightPayload(BaseModel):
+    date: str
+    weight: float
+
+
+class WeightPatchPayload(BaseModel):
+    date: str | None = None
+    weight: float | None = None
 
 
 def _authorized(x_auth_token: str | None) -> str:
@@ -49,17 +61,20 @@ def summary(x_auth_token: str | None = Header(default=None)):
 
 
 @app.post("/api/weights")
-def add_weight(payload: dict, x_auth_token: str | None = Header(default=None)):
+def add_weight(payload: WeightPayload, x_auth_token: str | None = Header(default=None)):
     _authorized(x_auth_token)
-    date_iso = normalize_date(str(payload["date"]))
-    upsert_weight(date_iso, float(payload["weight"]))
+    try:
+        date_iso = normalize_date(payload.date)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="bad date")
+    upsert_weight(date_iso, payload.weight)
     return {"ok": True, "date": date_iso}
 
 
 @app.patch("/api/weights/{weight_id}")
 def edit_weight(
     weight_id: int,
-    payload: dict,
+    payload: WeightPatchPayload,
     x_auth_token: str | None = Header(default=None),
 ):
     _authorized(x_auth_token)
@@ -67,9 +82,19 @@ def edit_weight(
     current = next((r for r in rows if r["id"] == weight_id), None)
     if current is None:
         raise HTTPException(status_code=404, detail="not found")
-    date_iso = normalize_date(str(payload["date"])) if "date" in payload else current["date"]
-    weight = float(payload["weight"]) if "weight" in payload else current["weight"]
-    update_weight(weight_id, date_iso, weight)
+    if payload.date is None and payload.weight is None:
+        raise HTTPException(status_code=422, detail="nothing to update")
+    date_iso = normalize_date(payload.date) if payload.date is not None else current["date"]
+    weight = payload.weight if payload.weight is not None else current["weight"]
+    try:
+        update_weight(weight_id, date_iso, weight)
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="another weighing already exists on that date",
+        )
+    except ValueError:
+        raise HTTPException(status_code=422, detail="bad date")
     return {"ok": True}
 
 
