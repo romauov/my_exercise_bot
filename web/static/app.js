@@ -62,6 +62,7 @@ async function loadPeriod() {
   currentData = await res.json();
   const labels = currentData.map((r) => r.date);
   const values = currentData.map((r) => r.weight);
+  const trend = values.length > 1 ? fitTrend(values) : null;
 
   if (chart) chart.destroy();
   chart = new Chart($("chart"), {
@@ -76,6 +77,20 @@ async function loadPeriod() {
           pointHitRadius: 10,
           tension: 0.2,
         },
+        ...(trend
+          ? [
+              {
+                label: "Тренд",
+                data: trend,
+                pointRadius: 0,
+                pointHitRadius: 0,
+                borderWidth: 2,
+                borderDash: [6, 4],
+                borderColor: "#3b82f6",
+                tension: 0,
+              },
+            ]
+          : []),
       ],
     },
     options: {
@@ -88,12 +103,27 @@ async function loadPeriod() {
   if (currentData.length) hide("empty-msg"); else show("empty-msg");
 }
 
+/* Least-squares fit like the bot's matplotlib plot (np.polyfit over
+   point indices): returns y[i] = slope*i + intercept for each i. */
+function fitTrend(values) {
+  const n = values.length;
+  const sumX = (n * (n - 1)) / 2;
+  const sumY = values.reduce((a, b) => a + b, 0);
+  const sumXY = values.reduce((a, y, i) => a + i * y, 0);
+  const sumXX = values.reduce((a, _, i) => a + i * i, 0);
+  const denom = n * sumXX - sumX * sumX;
+  const slope = (n * sumXY - sumX * sumY) / denom;
+  const intercept = (sumY - slope * sumX) / n;
+  return values.map((_, i) => slope * i + intercept);
+}
+
 function onClick(event) {
   const points = chart.getElementsAtEventForMode(
     event, "nearest", { intersect: true }, true
   );
-  if (!points.length) return;
-  const record = currentData[points[0].index];
+  const weightPoint = points.find((p) => p.datasetIndex === 0);
+  if (!weightPoint) return;
+  const record = currentData[weightPoint.index];
   openEditModal(record);
 }
 
