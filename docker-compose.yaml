@@ -1,14 +1,16 @@
 services:  
-  bot:  
-    build: .  
-    restart: always  
-    env_file:  
-      - .env  
-    volumes:  
-      - ./data:/app/data
-    working_dir: /app
+  # Запуск бота приостановлен: сейчас основной интерфейс — сайт контроля веса.
+  # Для возврата бота раскомментируйте блок ниже (и `python -m bot` в bot.py).
+  # bot:  
+  #   build: .  
+  #   restart: always  
+  #   env_file:  
+  #     - .env  
+  #   volumes:  
+  #     - ./data:/app/data
+  #   working_dir: /app
 
-  web:
+  web:  
     build: .
     restart: always
     env_file:

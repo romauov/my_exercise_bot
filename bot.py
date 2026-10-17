@@ -23,5 +23,7 @@ async def main():
     
     await dp.start_polling(bot)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+# Запуск бота приостановлен: сейчас основной интерфейс — сайт контроля веса (web/).
+# Бот включается обратно открытием этих строк.
+# if __name__ == "__main__":
+#     asyncio.run(main())
