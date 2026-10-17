@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Контроль веса</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Вес</h1>
+    <div class="periods" id="periods">
+      <button data-period="last" class="active">14 дней</button>
+      <button data-period="month">Месяц</button>
+      <button data-period="quarter">Квартал</button>
+      <button data-period="year">Год</button>
+      <button data-period="all">Всё</button>
+    </div>
+    <button id="add-btn" class="primary">Ввести вес</button>
+  </header>
+  <main>
+    <canvas id="chart"></canvas>
+    <p id="empty-msg" class="hidden">Нет данных за выбранный период</p>
+  </main>
+</div>
+
+<div class="overlay hidden" id="login-overlay">
+  <div class="modal">
+    <h2>Вход</h2>
+    <input type="password" id="token-input" placeholder="Токен" autocomplete="current-password">
+    <p id="login-error" class="error hidden">Неверный токен</p>
+    <button id="login-btn" class="primary">Войти</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="add-overlay">
+  <div class="modal">
+    <h2>Ввести вес</h2>
+    <label>Дата
+      <input type="date" id="add-date">
+    </label>
+    <label>Вес, кг
+      <div class="weight-controls">
+        <button type="button" class="step" data-target="add-weight" data-step="-0.1">−</button>
+        <input type="number" step="0.1" id="add-weight" autocomplete="off">
+        <button type="button" class="step" data-target="add-weight" data-step="0.1">+</button>
+      </div>
+    </label>
+    <div class="row">
+      <button class="ghost" data-close="add-overlay">Отмена</button>
+      <button id="add-save" class="primary">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="edit-overlay">
+  <div class="modal">
+    <h2>Правка взвешивания</h2>
+    <label>Дата
+      <input type="date" id="edit-date">
+    </label>
+    <label>Вес, кг
+      <div class="weight-controls">
+        <button type="button" class="step" data-target="edit-weight" data-step="-0.1">−</button>
+        <input type="number" step="0.1" id="edit-weight" autocomplete="off">
+        <button type="button" class="step" data-target="edit-weight" data-step="0.1">+</button>
+      </div>
+    </label>
+    <div class="row">
+      <button class="danger" id="edit-delete">Удалить</button>
+      <button class="ghost" data-close="edit-overlay">Отмена</button>
+      <button id="edit-save" class="primary">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

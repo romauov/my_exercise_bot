@@ -46,7 +46,7 @@ def migrate_from_json():
     files = glob.glob("data/*_weights.json")
     added = 0
     for path in files:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8-sig") as f:
             entries = json.load(f)
         for entry in entries:
             date_iso, weight = _parse_entry(entry)

@@ -63,6 +63,18 @@ def test_migrate_without_file_is_silent(workspace):
     assert db.migrate_from_json() == 0
 
 
+def test_migrate_reads_utf8_bom_file(workspace):
+    workspace.joinpath("data", "777_weights.json").write_text(
+        json.dumps([{"weight": 68.1, "date": "05-03-2025"}]),
+        encoding="utf-8-sig",
+    )
+
+    db.init_db()
+
+    assert db.migrate_from_json() == 1
+    assert read_rows(workspace) == [("2025-03-05", 68.1)]
+
+
 def test_upsert_overwrites_same_date(workspace):
     db.init_db()
     db.upsert_weight("2025-01-10", 70.0)
