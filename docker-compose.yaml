@@ -7,3 +7,15 @@ services:
     volumes:  
       - ./data:/app/data
     working_dir: /app
+
+  web:
+    build: .
+    restart: always
+    env_file:
+      - .env
+    command: uvicorn web.main:app --host 0.0.0.0 --port 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    working_dir: /app
