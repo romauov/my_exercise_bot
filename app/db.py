@@ -66,11 +66,11 @@ def migrate_from_json():
 
 def _parse_entry(entry):
     raw_date = entry["date"]
-    date_iso = _normalize_date(raw_date)
+    date_iso = normalize_date(raw_date)
     return date_iso, float(entry["weight"])
 
 
-def _normalize_date(raw_date):
+def normalize_date(raw_date):
     """Accept ISO (YYYY-MM-DD) or legacy DD-MM-YYYY dates, return ISO."""
     raw_date = raw_date.strip()
     if len(raw_date) == 10 and raw_date[:4].isdigit():
@@ -131,3 +131,11 @@ def export_weights_json():
             "SELECT date, weight FROM weights ORDER BY date"
         ).fetchall()
     return [{"date": row["date"], "weight": row["weight"]} for row in rows]
+
+
+def export_weights_to_file(path):
+    """Dump all weighings as JSON to `path`; returns the same path."""
+    data = export_weights_json()
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+    return path
