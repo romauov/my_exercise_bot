@@ -6,3 +6,4 @@ data/*_pullups.json
 data/*_pushups.json
 *.png
 !data/.gitkeep
+.worktrees/
