@@ -1,0 +1,133 @@
+:root {
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --primary: #2f6fed;
+  --danger: #d64545;
+  --text: #222;
+  --muted: #888;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+.wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+h1 { margin: 0; font-size: 24px; flex-shrink: 0; }
+
+.periods { display: flex; gap: 4px; }
+
+.periods button {
+  border: 1px solid #ccc;
+  background: var(--card);
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.periods button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+button {
+  font: inherit;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+button.primary { background: var(--primary); color: #fff; }
+button.ghost { background: transparent; border: 1px solid #ccc; }
+button.danger { background: var(--danger); color: #fff; }
+
+main {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+#chart { width: 100%; max-height: 60vh; }
+
+#empty-msg { text-align: center; color: var(--muted); }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.modal {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 20px;
+  width: min(92vw, 360px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal h2 { margin: 0; font-size: 18px; }
+
+.modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.modal input {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.weight-controls {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.weight-controls input { flex: 1; text-align: center; }
+
+.weight-controls .step {
+  width: 44px;
+  font-size: 18px;
+  background: #eef1f5;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.row .danger { margin-right: auto; }
+
+.error { color: var(--danger); margin: 0; font-size: 14px; }
+
+.hidden { display: none !important; }

@@ -5,10 +5,13 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.handlers.main_handlers import router
 from app.settings import secrets as s
 from app.utils import set_schedule
+from app.db import init_db, migrate_from_json
 
 logging.basicConfig(level=logging.INFO)
 
 async def main():
+    init_db()
+    migrate_from_json()
     scheduler = AsyncIOScheduler()
     
     bot = Bot(token=s.tg_token)

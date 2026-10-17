@@ -1,14 +1,14 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import json
 
-def draw_plot(user_id, period='last'):
-    with open(f'data/{user_id}_weights.json', 'r') as file:
-        json_data = json.load(file)
+from app.db import get_weights
 
-    df = pd.DataFrame(json_data)
-    df['date'] = pd.to_datetime(df['date'], dayfirst=True)
+def draw_plot(user_id=None, period='last'):
+    json_data = get_weights(period)
+
+    df = pd.DataFrame(json_data, columns=['weight', 'date'])
+    df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date')
 
     if df.empty:

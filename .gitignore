@@ -2,6 +2,7 @@
 __pycache__/
 workout_cards.json
 data/*_weights.json
+data/app.db*
 data/*_pullups.json
 data/*_pushups.json
 *.png

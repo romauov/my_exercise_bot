@@ -5,6 +5,7 @@ from aiogram import Bot
 from apscheduler.triggers.cron import CronTrigger
 from app.draw_weight_plot import draw_plot
 from app.settings import secrets as s
+from app.db import upsert_weight, normalize_date
 
 
 def pick_exercises(path):
@@ -41,20 +42,7 @@ def set_schedule(scheduler, bot):
     scheduler.start()
 
      
-def save_weight_json(user_id, weight, date):
-    data = {
-        "weight": weight,
-        "date": date
-    }
-    try:
-        with open(f'data/{user_id}_weights.json', 'r') as file:
-            weights = json.load(file)
-    except FileNotFoundError:
-        weights = []
-    
-    weights = [w for w in weights if w.get('date') != date]
-    weights.append(data)
-
-    with open(f'data/{user_id}_weights.json', 'w') as file:
-        json.dump(weights, file, indent=4)
-    draw_plot(user_id=user_id)
+def save_weight_db(weight, date_ddmmyyyy):
+    """Store one weighing (bot date format DD-MM-YYYY) and redraw the plot."""
+    upsert_weight(normalize_date(date_ddmmyyyy), float(weight))
+    draw_plot()

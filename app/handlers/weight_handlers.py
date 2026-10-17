@@ -5,7 +5,8 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import Command
 from aiogram.types import FSInputFile, Message, ReplyKeyboardRemove, CallbackQuery
 from app.draw_weight_plot import draw_plot
-from app.utils import save_weight_json
+from app.utils import save_weight_db
+from app import db
 from app.keyboard_utils import period_keyboard, weight_input_keyboard, date_input_keyboard, continue_keyboard
 from app.response_formatters import format_weight_period_response
 
@@ -74,7 +75,7 @@ async def handle_weight_callback(callback: CallbackQuery, state: FSMContext):
         try:
             weight = float(current_weight)
             date = datetime.now().strftime("%d-%m-%Y")
-            save_weight_json(user_id, weight, date)
+            save_weight_db(weight, date)
             
             await callback.message.edit_text(
                 f"✅ Вес {weight} сохранен!",
@@ -201,7 +202,7 @@ async def handle_fill_weight_callback(callback: CallbackQuery, state: FSMContext
 
         try:
             weight = float(current_weight)
-            save_weight_json(callback.from_user.id, weight, fill_date)
+            save_weight_db(weight, fill_date)
 
             await callback.message.edit_text(
                 f"✅ Вес {weight} на {fill_date} сохранен!",
@@ -253,9 +254,9 @@ async def save_weight_data(message: Message):
     weight_file_path = f"data/{user_id}_weights.json"
 
     try:
-        with open(weight_file_path, "r") as f:
-            weight_file = FSInputFile(weight_file_path)
-            await message.answer_document(weight_file, caption="Ваши данные о весе")
+        db.export_weights_to_file(weight_file_path)
+        weight_file = FSInputFile(weight_file_path)
+        await message.answer_document(weight_file, caption="Ваши данные о весе")
     except FileNotFoundError:
         await message.answer(
             "❌ Файл с данными о весе не найден. Сначала добавьте данные с помощью команды /weight."
