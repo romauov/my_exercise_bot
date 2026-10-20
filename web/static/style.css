@@ -60,6 +60,20 @@ button.primary { background: var(--primary); color: #fff; }
 button.ghost { background: transparent; border: 1px solid #ccc; }
 button.danger { background: var(--danger); color: #fff; }
 
+#line-color {
+  margin-left: auto;
+  width: 34px;
+  height: 34px;
+  padding: 2px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: var(--card);
+  cursor: pointer;
+}
+
+#line-color::-webkit-color-swatch-wrapper { padding: 2px; }
+#line-color::-webkit-color-swatch { border: none; border-radius: 5px; }
+
 main {
   background: var(--card);
   border-radius: 12px;

@@ -1,9 +1,13 @@
 "use strict";
 
 const TOKEN_KEY = "weight_web_token";
+const COLOR_KEY = "weight_line_color";
+const DEFAULT_COLOR = "#3b82f6";
+const TREND_COLOR = "#e74c3c";
 const API_BASE = "/api";
 
 let token = localStorage.getItem(TOKEN_KEY) || "";
+let lineColor = localStorage.getItem(COLOR_KEY) || DEFAULT_COLOR;
 let chart = null;
 let currentPeriod = "last";
 let currentData = [];
@@ -73,6 +77,8 @@ async function loadPeriod() {
         {
           label: "Вес (кг)",
           data: values,
+          borderColor: lineColor,
+          backgroundColor: lineColor,
           pointRadius: 5,
           pointHitRadius: 10,
           tension: 0.2,
@@ -86,7 +92,7 @@ async function loadPeriod() {
                 pointHitRadius: 0,
                 borderWidth: 2,
                 borderDash: [6, 4],
-                borderColor: "#3b82f6",
+                borderColor: TREND_COLOR,
                 tension: 0,
               },
             ]
@@ -226,6 +232,16 @@ async function deleteWeight() {
   }
 }
 
+/* ---------- color ---------- */
+
+/* Recolor the chart line without refetching the data (trend stays red). */
+function applyLineColor() {
+  if (!chart) return;
+  chart.data.datasets[0].borderColor = lineColor;
+  chart.data.datasets[0].backgroundColor = lineColor;
+  chart.update();
+}
+
 /* ---------- wiring ---------- */
 
 function wire() {
@@ -245,6 +261,12 @@ function wire() {
   $("login-btn").addEventListener("click", login);
   $("token-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") login();
+  });
+  $("line-color").value = lineColor;
+  $("line-color").addEventListener("input", (e) => {
+    lineColor = e.target.value;
+    localStorage.setItem(COLOR_KEY, lineColor);
+    applyLineColor();
   });
   $("add-btn").addEventListener("click", openAddModal);
   $("add-save").addEventListener("click", saveNewWeight);
