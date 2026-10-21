@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Контроль веса</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <div class="wrap">
@@ -18,13 +18,14 @@
       <button data-period="year">Год</button>
       <button data-period="all">Всё</button>
     </div>
-    <input type="color" id="line-color" value="#3b82f6" title="Цвет графика">
-    <input type="number" id="goal-input" step="0.1" placeholder="Цель, кг" title="Целевой вес (пунктир на графике)" class="goal-input">
     <button id="add-btn" class="primary">Ввести вес</button>
   </header>
-  <main>
-    <canvas id="chart"></canvas>
-    <p id="empty-msg" class="hidden">Нет данных за выбранный период</p>
+  <main class="dashboard">
+    <section class="chart-card">
+      <canvas id="chart"></canvas>
+      <p id="empty-msg" class="hidden">Нет данных за выбранный период</p>
+    </section>
+    <aside class="panel" id="lines-panel" aria-label="Линии графика"></aside>
   </main>
 </div>
 
@@ -82,6 +83,6 @@
 
 <button id="backup-btn" class="backup-fab">Бэкап</button>
 
-<script src="app.js"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>
