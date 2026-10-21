@@ -5,6 +5,7 @@ const COLOR_KEY = "weight_line_color";
 const DEFAULT_COLOR = "#3b82f6";
 const TREND_COLOR = "#e74c3c";
 const GOAL_COLOR = "#f59e0b";
+const SMA_COLOR = "#8b5cf6";
 const EMA_HALF_LIFE_DAYS = 7;
 const API_BASE = "/api";
 
@@ -52,6 +53,21 @@ function movingAverage(data, halfLifeDays) {
       ema = ema + alpha * (y - ema);
     }
     result.push({ date: row.date, weight: ema });
+  }
+  return result;
+}
+
+/* Trailing SMA: arithmetic mean of all weighings within the last
+   `windowDays` (inclusive of gaps, like a "last 7 days" average). */
+function sma(data, windowDays) {
+  const result = [];
+  let start = 0;
+  for (let i = 0; i < data.length; i++) {
+    const cutoff = new Date(data[i].date).getTime() - (windowDays - 1) * 86400000;
+    while (new Date(data[start].date).getTime() < cutoff) start++;
+    let sum = 0;
+    for (let j = start; j <= i; j++) sum += data[j].weight;
+    result.push({ date: data[i].date, weight: sum / (i - start + 1) });
   }
   return result;
 }
@@ -157,6 +173,7 @@ async function loadPeriod() {
   const emaData = movingAverage(currentData, EMA_HALF_LIFE_DAYS)
     .map((r) => r.weight);
   const trend = fitTrend(rawValues);
+  const smaValues = sma(currentData, 7).map((r) => r.weight);
   const range = yScaleRange();
 
   if (chart) chart.destroy();
@@ -177,7 +194,7 @@ async function loadPeriod() {
           tension: 0.2,
         },
         {
-          label: "Средняя (7 дн.)",
+          label: "EMA (7 дн.)",
           data: emaData,
           borderColor: lineColor,
           borderWidth: 2.5,
@@ -186,6 +203,16 @@ async function loadPeriod() {
           pointHoverRadius: 0,
           fill: "start",
           backgroundColor: (ctx) => fillGradient(ctx),
+          tension: 0.3,
+        },
+        {
+          label: "SMA (7 дн.)",
+          data: smaValues,
+          borderColor: SMA_COLOR,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHitRadius: 0,
+          pointHoverRadius: 0,
           tension: 0.3,
         },
         ...(trend
@@ -247,7 +274,7 @@ async function loadPeriod() {
             label: (item) =>
               `${item.dataset.label}: ${item.parsed.y.toFixed(1)} кг`,
             filter: (item) =>
-              item.datasetIndex === 0 || item.datasetIndex === 1,
+              item.datasetIndex >= 0 && item.datasetIndex <= 2,
           },
         },
       },
