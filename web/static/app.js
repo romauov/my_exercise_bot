@@ -49,6 +49,8 @@ let currentData = []; // raw weighings, sorted by date
 let goalWeight = null;
 let currentConfig = loadConfig();
 let lastLabels = [];
+let currentTips = []; // tooltip title per displayed point
+let weeklyView = false; // true when points are weekly buckets
 
 const $ = (id) => document.getElementById(id);
 const MONTHS_SHORT = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
@@ -202,13 +204,102 @@ function shortLabels(data) {
   });
 }
 
-/* Vertical span: 1 kg of breathing room beyond the data on each side. */
-function yScaleRange() {
-  const values = currentData.map((r) => r.weight);
-  if (goalWeight !== null) values.push(goalWeight);
-  if (!values.length) return {};
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+/* Displayed series: on "Год"/"Всё" the daily weighings collapse into
+   weekly buckets (mean per calendar week); other periods stay daily. */
+function weeklyMode() {
+  return currentPeriod === "year" || currentPeriod === "all";
+}
+
+function fmtDDMM(dateStr) {
+  const [, m, d] = dateStr.split("-");
+  return `${d}.${m}`;
+}
+
+function mondayISO(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function aggregateWeekly(rows) {
+  const buckets = [];
+  const idxForRow = [];
+  let cur = null;
+  for (const row of rows) {
+    const key = mondayISO(row.date);
+    if (!cur || cur.key !== key) {
+      cur = { key, from: row.date, to: row.date, sum: 0, n: 0 };
+      buckets.push(cur);
+    }
+    cur.to = row.date;
+    cur.sum += row.weight;
+    cur.n += 1;
+    idxForRow.push(buckets.length - 1);
+  }
+  return { buckets, idxForRow };
+}
+
+function weeklyWeights(agg) {
+  return agg.buckets.map((b) => b.sum / b.n);
+}
+
+/* Per-bucket average of a value array computed on daily data
+   (nulls in the daily line stay absent in buckets without points). */
+function mapToBuckets(agg, dailyValues) {
+  const acc = agg.buckets.map(() => ({ s: 0, n: 0 }));
+  agg.idxForRow.forEach((bucketIndex, i) => {
+    const v = dailyValues[i];
+    if (Number.isFinite(v)) {
+      acc[bucketIndex].s += v;
+      acc[bucketIndex].n += 1;
+    }
+  });
+  return acc.map((x) => (x.n ? x.s / x.n : null));
+}
+
+function bucketLabels(agg) {
+  let prevMonth = null;
+  return agg.buckets.map((b) => {
+    const m = b.from.slice(5, 7);
+    if (m === prevMonth) return "";
+    prevMonth = m;
+    return MONTHS_SHORT[Number(m) - 1];
+  });
+}
+
+/* buildSeries() — the view model behind the chart. */
+function buildSeries() {
+  const daily = currentData;
+  if (weeklyMode()) {
+    const agg = aggregateWeekly(daily);
+    return {
+      weekly: true,
+      labels: bucketLabels(agg),
+      tips: agg.buckets.map((b) =>
+        b.from === b.to ? b.from : `${fmtDDMM(b.from)}–${fmtDDMM(b.to)}`
+      ),
+      raw: weeklyWeights(agg),
+      agg,
+    };
+  }
+  return {
+    weekly: false,
+    labels: shortLabels(daily),
+    tips: daily.map((r) => r.date),
+    raw: daily.map((r) => r.weight),
+    agg: null,
+  };
+}
+
+/* Vertical span: 1 kg of breathing room beyond the displayed values
+   on each side. */
+function yScaleRange(values) {
+  const vals = [...values];
+  if (goalWeight !== null) vals.push(goalWeight);
+  if (!vals.length) return {};
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
   return {
     min: Math.floor((min - 1) * 2) / 2,
     max: Math.ceil((max + 1) * 2) / 2,
@@ -396,13 +487,17 @@ async function loadPeriod() {
 }
 
 function rebuildChart() {
-  lastLabels = shortLabels(currentData);
+  const series = buildSeries();
+  lastLabels = series.labels;
+  currentTips = series.tips;
+  weeklyView = series.weekly;
 
-  /* "Прогноз тренда" extends the X axis by 2 weeks and draws the OLS
-     continuation beyond the last real point. */
+  /* "Прогноз тренда" extends the X axis by 2 steps; on weekly buckets
+     a step is a week, on daily data a day. */
   const hasForecast = currentConfig.extra.some((x) => x.kind === "forecast");
+  const stepTitles = series.weekly ? ["+1 нед", "+2 нед"] : ["+1 день", "+2 дня"];
   if (hasForecast && currentData.length >= 2) {
-    lastLabels = lastLabels.concat(["+1 нед", "+2 нед"]);
+    lastLabels = lastLabels.concat(stepTitles);
   }
 
   if (chart) chart.destroy();
@@ -414,13 +509,13 @@ function rebuildChart() {
   }
   hide("empty-msg");
 
-  const rawValues = currentData.map((r) => r.weight);
+  const rawValues = series.raw;
   const datasets = [];
   const deltaDatasets = [];
 
   /* Raw values are always dataset 0 (click-to-edit maps to it). */
   datasets.push({
-    label: "Вес (кг)",
+    label: series.weekly ? "Вес (среднее за нед.)" : "Вес (кг)",
     data: rawValues,
     borderColor: currentConfig.lineColor,
     borderWidth: 2,
@@ -450,6 +545,7 @@ function rebuildChart() {
     } else {
       values = kind.calc(currentData);
       if (!Array.isArray(values)) continue;
+      if (series.weekly) values = mapToBuckets(series.agg, values);
     }
     const dataset = {
       label: kind.label,
@@ -482,7 +578,7 @@ function rebuildChart() {
     });
   }
 
-  const range = yScaleRange();
+  const range = yScaleRange(rawValues);
   const deltaRange = deltaScale(deltaDatasets.flatMap((d) => d.data));
   const scales = {
     x: { grid: { display: false }, ticks: { autoSkip: true, maxRotation: 0, padding: 8 } },
@@ -516,11 +612,9 @@ function rebuildChart() {
           callbacks: {
             title: (items) => {
               const idx = items[0]?.dataIndex;
-              return idx === undefined
-                ? ""
-                : currentData[idx]?.date ?? lastLabels[idx];
+              return idx === undefined ? "" : currentTips[idx] ?? lastLabels[idx] ?? "";
             },
-            label: (item) => `${item.dataset.label}: ${item.parsed.y.toFixed(1)} кг`,
+            label: (item) => `${item.dataset.label}: ${item.parsed.y.toFixed(1)} ${item.dataset.yAxisID === "yDelta" ? "кг/" + (item.dataset.label.includes("30") ? "мес" : "нед") : "кг"}`,
             filter: (item) =>
               !item.dataset.label.startsWith("Цель"),
           },
@@ -546,6 +640,8 @@ function fillGradient(ctx) {
 }
 
 function onClick(event) {
+  /* Weekly buckets are averages — there is no single record to edit. */
+  if (weeklyView) return;
   const points = chart.getElementsAtEventForMode(
     event, "nearest", { intersect: true }, true
   );
