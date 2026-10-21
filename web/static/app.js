@@ -104,20 +104,17 @@ function shortLabels(data) {
   });
 }
 
-/* Vertical span with breathing room so daily jitter doesn't dominate. */
+/* Vertical span: 1 kg of breathing room beyond the data on each side. */
 function yScaleRange() {
   const values = currentData.map((r) => r.weight);
   if (goalWeight !== null) values.push(goalWeight);
   if (!values.length) return {};
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const pad = Math.max(0.5, (max - min) * 0.35);
-  const lo = Math.floor((min - pad) * 2) / 2;
-  const hi = Math.ceil((max + pad) * 2) / 2;
   return {
-    min: lo,
-    max: hi,
-    step: hi - lo > 4 ? 1 : 0.5,
+    min: Math.floor((min - 1) * 2) / 2,
+    max: Math.ceil((max + 1) * 2) / 2,
+    step: max - min > 4 ? 1 : 0.5,
   };
 }
 
