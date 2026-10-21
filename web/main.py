@@ -10,8 +10,10 @@ from pydantic import BaseModel
 from app.db import (
     delete_weight,
     get_last_weight,
+    get_setting,
     get_weights,
     normalize_date,
+    set_setting,
     update_weight,
     upsert_weight,
     export_weights_json,
@@ -30,6 +32,10 @@ class WeightPayload(BaseModel):
 class WeightPatchPayload(BaseModel):
     date: str | None = None
     weight: float | None = None
+
+
+class GoalPayload(BaseModel):
+    weight: float
 
 
 def _authorized(x_auth_token: str | None) -> str:
@@ -61,6 +67,20 @@ def list_weights(x_auth_token: str | None = Header(default=None), period: str | 
 def summary(x_auth_token: str | None = Header(default=None)):
     _authorized(x_auth_token)
     return get_last_weight()
+
+
+@app.get("/api/goal")
+def read_goal(x_auth_token: str | None = Header(default=None)):
+    _authorized(x_auth_token)
+    value = get_setting("goal_weight")
+    return {"weight": value} if value is not None else None
+
+
+@app.put("/api/goal")
+def save_goal(payload: GoalPayload, x_auth_token: str | None = Header(default=None)):
+    _authorized(x_auth_token)
+    set_setting("goal_weight", payload.weight)
+    return {"ok": True, "weight": payload.weight}
 
 
 @app.get("/api/backup")

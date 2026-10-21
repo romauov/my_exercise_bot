@@ -133,6 +133,55 @@ def test_static_files_revalidate_on_every_load(client, workspace):
     assert r.headers.get("cache-control") == "no-cache"
 
 
+def test_get_goal_empty_is_null(client, workspace):
+    client, token = client
+    db = pytest.importorskip("app.db")
+    db.init_db()
+
+    assert (
+        client.get("/api/goal", headers=h(token)).status_code,
+        client.get("/api/goal", headers=h(token)).json(),
+    ) == (200, None)
+
+
+def test_put_and_get_goal(client, workspace):
+    client, token = client
+    db = pytest.importorskip("app.db")
+    db.init_db()
+
+    r = client.put("/api/goal", headers=h(token), json={"weight": 90.0})
+
+    assert r.status_code == 200
+    resp = client.get("/api/goal", headers=h(token))
+    assert resp.json() == {"weight": 90.0}
+
+
+def test_put_goal_overwrites(client, workspace):
+    client, token = client
+    db = pytest.importorskip("app.db")
+    db.init_db()
+    client.put("/api/goal", headers=h(token), json={"weight": 90.0})
+
+    client.put("/api/goal", headers=h(token), json={"weight": 91.2})
+
+    assert client.get("/api/goal", headers=h(token)).json() == {"weight": 91.2}
+
+
+def test_goal_requires_token(client, workspace):
+    client, token = client
+
+    assert client.get("/api/goal").status_code == 401
+    assert client.put("/api/goal", json={"weight": 90.0}).status_code == 401
+
+
+def test_put_goal_invalid_body_returns_422(client, workspace):
+    client, token = client
+
+    r = client.put("/api/goal", headers=h(token), json={"weight": "abc"})
+
+    assert r.status_code == 422
+
+
 def test_export_weights_endpoint(client, workspace):
     client, token = client
     db = pytest.importorskip("app.db")

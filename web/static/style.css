@@ -74,6 +74,14 @@ button.danger { background: var(--danger); color: #fff; }
 #line-color::-webkit-color-swatch-wrapper { padding: 2px; }
 #line-color::-webkit-color-swatch { border: none; border-radius: 5px; }
 
+.goal-input {
+  width: 96px;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font: inherit;
+}
+
 main {
   background: var(--card);
   border-radius: 12px;

@@ -1,5 +1,8 @@
 # AGENTS.md
 
+## Working Rules
+- **Push only on explicit user command** — commits are fine, but `git push` категорически только после явной просьбы пользователя («запуши», «push»).
+
 ## Project Overview
 Telegram-bot for exercise reminders using aiogram 3.x. Sends scheduled workouts hourly and tracks weight.
 

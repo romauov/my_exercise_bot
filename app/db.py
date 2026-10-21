@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS weights (
     weight REAL NOT NULL,
     UNIQUE(date)
 );
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
 
@@ -126,6 +130,25 @@ def export_weights_json():
             "SELECT date, weight FROM weights ORDER BY date"
         ).fetchall()
     return [{"date": row["date"], "weight": row["weight"]} for row in rows]
+
+
+def get_setting(key):
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT value FROM settings WHERE key = ?", (key,)
+        ).fetchone()
+    return float(row[0]) if row else None
+
+
+def set_setting(key, value):
+    with _connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO settings(key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            (key, str(value)),
+        )
 
 
 def export_weights_to_file(path):

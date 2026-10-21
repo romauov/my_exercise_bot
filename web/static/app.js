@@ -4,15 +4,19 @@ const TOKEN_KEY = "weight_web_token";
 const COLOR_KEY = "weight_line_color";
 const DEFAULT_COLOR = "#3b82f6";
 const TREND_COLOR = "#e74c3c";
+const GOAL_COLOR = "#f59e0b";
+const EMA_HALF_LIFE_DAYS = 7;
 const API_BASE = "/api";
 
 let token = localStorage.getItem(TOKEN_KEY) || "";
 let lineColor = localStorage.getItem(COLOR_KEY) || DEFAULT_COLOR;
 let chart = null;
 let currentPeriod = "last";
-let currentData = [];
+let currentData = []; // raw weighings, sorted by date
+let goalWeight = null;
 
 const $ = (id) => document.getElementById(id);
+const MONTHS_SHORT = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
 
 function show(id) { $(id).classList.remove("hidden"); }
 function hide(id) { $(id).classList.add("hidden"); }
@@ -23,12 +27,90 @@ function todayLocalISO() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/* Hex (#rgb or #rrggbb) -> rgba() CSS string. */
+function rgba(hex, alpha) {
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (!/^[0-9a-f]{6}$/i.test(h)) h = DEFAULT_COLOR.replace("#", "");
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/* Time-aware exponential moving average: smoother the farther (in days)
+   a weighing is from the previous one, with a 7-day time constant.
+   Daily weighings -> ~7-day smoothing window. */
+function movingAverage(data, halfLifeDays) {
+  const result = [];
+  let ema = null;
+  for (const row of data) {
+    const y = row.weight;
+    if (ema === null) {
+      ema = y;
+    } else {
+      const dt = (new Date(row.date) - new Date(result.at(-1).date)) / 86400000;
+      const alpha = 1 - Math.pow(0.5, Math.max(dt, 0) / halfLifeDays);
+      ema = ema + alpha * (y - ema);
+    }
+    result.push({ date: row.date, weight: ema });
+  }
+  return result;
+}
+
+/* Least-squares fit like the bot's matplotlib plot (np.polyfit over
+   point indices): returns y[i] = slope*i + intercept for each i. */
+function fitTrend(values) {
+  const n = values.length;
+  if (n < 2) return null;
+  const sumX = (n * (n - 1)) / 2;
+  const sumY = values.reduce((a, b) => a + b, 0);
+  const sumXY = values.reduce((a, y, i) => a + i * y, 0);
+  const sumXX = values.reduce((a, _, i) => a + i * i, 0);
+  const denom = n * sumXX - sumX * sumX;
+  if (denom === 0) return null;
+  const slope = (n * sumXY - sumX * sumY) / denom;
+  const intercept = (sumY - slope * sumX) / n;
+  return values.map((_, i) => slope * i + intercept);
+}
+
+/* X labels: "07.10" for short periods; for year/all a month name only
+   on the first point of each month (no month repeated 10 times). */
+function shortLabels(data) {
+  const yearView = currentPeriod === "year" || currentPeriod === "all";
+  let prevMonth = null;
+  return data.map((r) => {
+    const [y, m, d] = r.date.split("-");
+    if (yearView) {
+      const label = m === prevMonth ? "" : MONTHS_SHORT[Number(m) - 1];
+      prevMonth = m;
+      return label;
+    }
+    return `${d}.${m}`;
+  });
+}
+
+/* Vertical span with breathing room so daily jitter doesn't dominate. */
+function yScaleRange() {
+  const values = currentData.map((r) => r.weight);
+  if (goalWeight !== null) values.push(goalWeight);
+  if (!values.length) return {};
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pad = Math.max(0.5, (max - min) * 0.35);
+  const lo = Math.floor((min - pad) * 2) / 2;
+  const hi = Math.ceil((max + pad) * 2) / 2;
+  return {
+    min: lo,
+    max: hi,
+    step: hi - lo > 4 ? 1 : 0.5,
+  };
+}
+
 async function api(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       "X-Auth-Token": token,
-      "Content-Type": "application/json",
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {}),
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
@@ -62,11 +144,20 @@ async function login() {
 /* ---------- chart ---------- */
 
 async function loadPeriod() {
-  const res = await api(`/weights?period=${currentPeriod}`);
+  const [res, goalRes] = await Promise.all([
+    api(`/weights?period=${currentPeriod}`),
+    api("/goal"),
+  ]);
   currentData = await res.json();
-  const labels = currentData.map((r) => r.date);
-  const values = currentData.map((r) => r.weight);
-  const trend = values.length > 1 ? fitTrend(values) : null;
+  goalWeight = (await goalRes.json())?.weight ?? null;
+  if (goalWeight !== null) $("goal-input").value = goalWeight;
+
+  const labels = shortLabels(currentData);
+  const rawValues = currentData.map((r) => r.weight);
+  const emaData = movingAverage(currentData, EMA_HALF_LIFE_DAYS)
+    .map((r) => r.weight);
+  const trend = fitTrend(rawValues);
+  const range = yScaleRange();
 
   if (chart) chart.destroy();
   chart = new Chart($("chart"), {
@@ -76,12 +167,26 @@ async function loadPeriod() {
       datasets: [
         {
           label: "Вес (кг)",
-          data: values,
-          borderColor: lineColor,
-          backgroundColor: lineColor,
-          pointRadius: 5,
-          pointHitRadius: 10,
+          data: rawValues,
+          borderColor: rgba(lineColor, 0.35),
+          backgroundColor: rgba(lineColor, 0.5),
+          borderWidth: 1.5,
+          pointRadius: 0,
+          pointHitRadius: 12,
+          pointHoverRadius: 5,
           tension: 0.2,
+        },
+        {
+          label: "Средняя (7 дн.)",
+          data: emaData,
+          borderColor: lineColor,
+          borderWidth: 2.5,
+          pointRadius: 0,
+          pointHitRadius: 0,
+          pointHoverRadius: 0,
+          fill: "start",
+          backgroundColor: (ctx) => fillGradient(ctx),
+          tension: 0.3,
         },
         ...(trend
           ? [
@@ -97,30 +202,73 @@ async function loadPeriod() {
               },
             ]
           : []),
+        ...(goalWeight !== null && currentData.length
+          ? [
+              {
+                label: `Цель ${goalWeight.toFixed(1)}`,
+                data: labels.map(() => goalWeight),
+                pointRadius: 0,
+                pointHitRadius: 0,
+                borderWidth: 1.5,
+                borderDash: [4, 4],
+                borderColor: GOAL_COLOR,
+                tension: 0,
+              },
+            ]
+          : []),
       ],
     },
     options: {
       onClick,
+      interaction: { mode: "nearest", intersect: false },
       scales: {
-        y: { title: { display: true, text: "кг" } },
+        x: {
+          grid: { display: false },
+          ticks: {
+            autoSkip: true,
+            maxRotation: 0,
+            padding: 8,
+          },
+        },
+        y: {
+          min: range.min,
+          max: range.max,
+          grid: { color: "rgba(0,0,0,0.06)" },
+          ticks: {
+            stepSize: range.step,
+            callback: (v) => v.toFixed(1),
+          },
+        },
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            title: (items) => items[0] ? currentData[items[0].dataIndex]?.date ?? "" : "",
+            label: (item) =>
+              `${item.dataset.label}: ${item.parsed.y.toFixed(1)} кг`,
+            filter: (item) =>
+              item.datasetIndex === 0 || item.datasetIndex === 1,
+          },
+        },
       },
     },
   });
   if (currentData.length) hide("empty-msg"); else show("empty-msg");
 }
 
-/* Least-squares fit like the bot's matplotlib plot (np.polyfit over
-   point indices): returns y[i] = slope*i + intercept for each i. */
-function fitTrend(values) {
-  const n = values.length;
-  const sumX = (n * (n - 1)) / 2;
-  const sumY = values.reduce((a, b) => a + b, 0);
-  const sumXY = values.reduce((a, y, i) => a + i * y, 0);
-  const sumXX = values.reduce((a, _, i) => a + i * i, 0);
-  const denom = n * sumXX - sumX * sumX;
-  const slope = (n * sumXY - sumX * sumY) / denom;
-  const intercept = (sumY - slope * sumX) / n;
-  return values.map((_, i) => slope * i + intercept);
+/* Vertical gradient under the main (EMA) line: strongest near the max of
+   the data and fading to transparent toward the bottom axis. */
+function fillGradient(ctx) {
+  const area = ctx.chart.chartArea;
+  if (!area || !currentData.length) return rgba(lineColor, 0.15);
+  const yScale = ctx.chart.scales.y;
+  const dataMax = Math.max(...currentData.map((r) => r.weight));
+  const tTop = (dataMax - yScale.min) / (yScale.max - yScale.min);
+  const g = ctx.chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
+  g.addColorStop(0, rgba(lineColor, 0.01));
+  g.addColorStop(Math.min(1, Math.max(0.01, tTop)), rgba(lineColor, 0.22));
+  g.addColorStop(1, rgba(lineColor, 0.22));
+  return g;
 }
 
 function onClick(event) {
@@ -152,6 +300,28 @@ function stepWeight(button) {
   const value = parseFloat(input.value) || 0;
   const next = Math.round((value + step) * 100) / 100;
   input.value = next.toFixed(1);
+}
+
+/* ---------- goal ---------- */
+
+async function saveGoal() {
+  const value = parseFloat($("goal-input").value);
+  if (Number.isNaN(value)) return;
+  const res = await api("/goal", { method: "PUT", body: { weight: value } });
+  if (res.ok) loadPeriod();
+}
+
+/* ---------- color ---------- */
+
+/* Recolor line datasets without refetching the data. */
+function applyLineColor() {
+  if (!chart) return;
+  chart.data.datasets[0].borderColor = rgba(lineColor, 0.35);
+  chart.data.datasets[0].backgroundColor = rgba(lineColor, 0.5);
+  if (chart.data.datasets[1]) {
+    chart.data.datasets[1].borderColor = lineColor;
+  }
+  chart.update();
 }
 
 /* ---------- add modal ---------- */
@@ -232,16 +402,6 @@ async function deleteWeight() {
   }
 }
 
-/* ---------- color ---------- */
-
-/* Recolor the chart line without refetching the data (trend stays red). */
-function applyLineColor() {
-  if (!chart) return;
-  chart.data.datasets[0].borderColor = lineColor;
-  chart.data.datasets[0].backgroundColor = lineColor;
-  chart.update();
-}
-
 /* ---------- backup ---------- */
 
 async function downloadBackup() {
@@ -284,6 +444,7 @@ function wire() {
     localStorage.setItem(COLOR_KEY, lineColor);
     applyLineColor();
   });
+  $("goal-input").addEventListener("change", saveGoal);
   $("add-btn").addEventListener("click", openAddModal);
   $("backup-btn").addEventListener("click", downloadBackup);
   $("add-save").addEventListener("click", saveNewWeight);

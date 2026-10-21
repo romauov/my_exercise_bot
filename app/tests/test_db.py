@@ -151,3 +151,33 @@ def test_get_last_weight_returns_latest(workspace):
     last = db.get_last_weight()
 
     assert (last["date"], last["weight"]) == ("2025-02-01", 71.0)
+
+
+def test_settings_roundtrip(workspace):
+    db.init_db()
+
+    assert db.get_setting("goal_weight") is None
+
+    db.set_setting("goal_weight", 90.5)
+
+    assert db.get_setting("goal_weight") == 90.5
+
+    db.set_setting("goal_weight", 91.0)
+
+    assert db.get_setting("goal_weight") == 91.0
+
+
+def test_settings_survive_workspace_reopen(workspace):
+    db.init_db()
+    db.set_setting("goal_weight", 90.5)
+
+    # A fresh connection (like the other service/container) reads the value.
+    conn = sqlite3.connect(workspace / "data" / "app.db")
+    try:
+        row = conn.execute(
+            "SELECT value FROM settings WHERE key = 'goal_weight'"
+        ).fetchone()
+    finally:
+        conn.close()
+
+    assert float(row[0]) == 90.5
