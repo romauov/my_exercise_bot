@@ -123,6 +123,16 @@ def test_summary_empty_is_null(client, workspace):
     assert r.json() is None
 
 
+def test_static_files_revalidate_on_every_load(client, workspace):
+    """Pages must revalidate cached CSS/JS, otherwise UI updates look stale."""
+    client, token = client
+    (workspace / "web").mkdir()  # empty static dir is enough for a request test
+    r = client.get("/style.css")
+
+    assert r.status_code in (200, 404)
+    assert r.headers.get("cache-control") == "no-cache"
+
+
 def test_export_weights_endpoint(client, workspace):
     client, token = client
     db = pytest.importorskip("app.db")

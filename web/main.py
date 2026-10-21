@@ -124,6 +124,20 @@ def remove_weight(weight_id: int, x_auth_token: str | None = Header(default=None
     return {"ok": True}
 
 
+class NoCacheStaticFiles(StaticFiles):
+    """Serve static assets with `Cache-Control: no-cache`.
+
+    Browsers then revalidate ETags on every load: unchanged files answer
+    304, updated ones answer 200 — UI changes are never stuck behind a
+    heuristic cache.
+    """
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(static_dir, exist_ok=True)
-app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+app.mount("/", NoCacheStaticFiles(directory=static_dir, html=True), name="static")
