@@ -3,10 +3,8 @@
 const TOKEN_KEY = "weight_web_token";
 const COLOR_KEY = "weight_line_color";
 const DEFAULT_COLOR = "#3b82f6";
-const TREND_COLOR = "#e74c3c";
+const TREND_COLOR = "#e74c3c"; // SMA line: red dashed
 const GOAL_COLOR = "#f59e0b";
-const SMA_COLOR = "#8b5cf6";
-const EMA_HALF_LIFE_DAYS = 7;
 const API_BASE = "/api";
 
 let token = localStorage.getItem(TOKEN_KEY) || "";
@@ -37,26 +35,6 @@ function rgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/* Time-aware exponential moving average: smoother the farther (in days)
-   a weighing is from the previous one, with a 7-day time constant.
-   Daily weighings -> ~7-day smoothing window. */
-function movingAverage(data, halfLifeDays) {
-  const result = [];
-  let ema = null;
-  for (const row of data) {
-    const y = row.weight;
-    if (ema === null) {
-      ema = y;
-    } else {
-      const dt = (new Date(row.date) - new Date(result.at(-1).date)) / 86400000;
-      const alpha = 1 - Math.pow(0.5, Math.max(dt, 0) / halfLifeDays);
-      ema = ema + alpha * (y - ema);
-    }
-    result.push({ date: row.date, weight: ema });
-  }
-  return result;
-}
-
 /* Trailing SMA: arithmetic mean of all weighings within the last
    `windowDays` (inclusive of gaps, like a "last 7 days" average). */
 function sma(data, windowDays) {
@@ -70,22 +48,6 @@ function sma(data, windowDays) {
     result.push({ date: data[i].date, weight: sum / (i - start + 1) });
   }
   return result;
-}
-
-/* Least-squares fit like the bot's matplotlib plot (np.polyfit over
-   point indices): returns y[i] = slope*i + intercept for each i. */
-function fitTrend(values) {
-  const n = values.length;
-  if (n < 2) return null;
-  const sumX = (n * (n - 1)) / 2;
-  const sumY = values.reduce((a, b) => a + b, 0);
-  const sumXY = values.reduce((a, y, i) => a + i * y, 0);
-  const sumXX = values.reduce((a, _, i) => a + i * i, 0);
-  const denom = n * sumXX - sumX * sumX;
-  if (denom === 0) return null;
-  const slope = (n * sumXY - sumX * sumY) / denom;
-  const intercept = (sumY - slope * sumX) / n;
-  return values.map((_, i) => slope * i + intercept);
 }
 
 /* X labels: "07.10" for short periods; for year/all a month name only
@@ -167,9 +129,6 @@ async function loadPeriod() {
 
   const labels = shortLabels(currentData);
   const rawValues = currentData.map((r) => r.weight);
-  const emaData = movingAverage(currentData, EMA_HALF_LIFE_DAYS)
-    .map((r) => r.weight);
-  const trend = fitTrend(rawValues);
   const smaValues = sma(currentData, 7).map((r) => r.weight);
   const range = yScaleRange();
 
@@ -182,50 +141,27 @@ async function loadPeriod() {
         {
           label: "Вес (кг)",
           data: rawValues,
-          borderColor: rgba(lineColor, 0.35),
-          backgroundColor: rgba(lineColor, 0.5),
-          borderWidth: 1.5,
+          borderColor: lineColor,
+          borderWidth: 2,
           pointRadius: 0,
           pointHitRadius: 12,
           pointHoverRadius: 5,
-          tension: 0.2,
-        },
-        {
-          label: "EMA (7 дн.)",
-          data: emaData,
-          borderColor: lineColor,
-          borderWidth: 2.5,
-          pointRadius: 0,
-          pointHitRadius: 0,
-          pointHoverRadius: 0,
+          pointBackgroundColor: rgba(lineColor, 0.85),
           fill: "start",
           backgroundColor: (ctx) => fillGradient(ctx),
-          tension: 0.3,
+          tension: 0.2,
         },
         {
           label: "SMA (7 дн.)",
           data: smaValues,
-          borderColor: SMA_COLOR,
+          borderColor: TREND_COLOR,
           borderWidth: 2,
+          borderDash: [6, 4],
           pointRadius: 0,
           pointHitRadius: 0,
           pointHoverRadius: 0,
           tension: 0.3,
         },
-        ...(trend
-          ? [
-              {
-                label: "Тренд",
-                data: trend,
-                pointRadius: 0,
-                pointHitRadius: 0,
-                borderWidth: 2,
-                borderDash: [6, 4],
-                borderColor: TREND_COLOR,
-                tension: 0,
-              },
-            ]
-          : []),
         ...(goalWeight !== null && currentData.length
           ? [
               {
@@ -271,7 +207,7 @@ async function loadPeriod() {
             label: (item) =>
               `${item.dataset.label}: ${item.parsed.y.toFixed(1)} кг`,
             filter: (item) =>
-              item.datasetIndex >= 0 && item.datasetIndex <= 2,
+              item.datasetIndex === 0 || item.datasetIndex === 1,
           },
         },
       },
@@ -280,7 +216,7 @@ async function loadPeriod() {
   if (currentData.length) hide("empty-msg"); else show("empty-msg");
 }
 
-/* Vertical gradient under the main (EMA) line: strongest near the max of
+/* Vertical gradient under the main (raw) line: strongest near the max of
    the data and fading to transparent toward the bottom axis. */
 function fillGradient(ctx) {
   const area = ctx.chart.chartArea;
@@ -337,14 +273,12 @@ async function saveGoal() {
 
 /* ---------- color ---------- */
 
-/* Recolor line datasets without refetching the data. */
+/* Recolor the main (raw) line without refetching the data; the gradient
+   is scriptable and re-evaluates on update(). */
 function applyLineColor() {
   if (!chart) return;
-  chart.data.datasets[0].borderColor = rgba(lineColor, 0.35);
-  chart.data.datasets[0].backgroundColor = rgba(lineColor, 0.5);
-  if (chart.data.datasets[1]) {
-    chart.data.datasets[1].borderColor = lineColor;
-  }
+  chart.data.datasets[0].borderColor = lineColor;
+  chart.data.datasets[0].pointBackgroundColor = rgba(lineColor, 0.85);
   chart.update();
 }
 
