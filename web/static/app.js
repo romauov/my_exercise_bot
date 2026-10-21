@@ -242,6 +242,22 @@ function applyLineColor() {
   chart.update();
 }
 
+/* ---------- backup ---------- */
+
+async function downloadBackup() {
+  const res = await api("/backup");
+  if (!res.ok) return;
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `weights_${todayLocalISO()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 /* ---------- wiring ---------- */
 
 function wire() {
@@ -269,6 +285,7 @@ function wire() {
     applyLineColor();
   });
   $("add-btn").addEventListener("click", openAddModal);
+  $("backup-btn").addEventListener("click", downloadBackup);
   $("add-save").addEventListener("click", saveNewWeight);
   $("edit-save").addEventListener("click", saveEditWeight);
   $("edit-delete").addEventListener("click", deleteWeight);

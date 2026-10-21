@@ -1,7 +1,9 @@
+import json
 import os
 import sqlite3
 
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -12,6 +14,7 @@ from app.db import (
     normalize_date,
     update_weight,
     upsert_weight,
+    export_weights_json,
     init_db,
     migrate_from_json,
 )
@@ -58,6 +61,19 @@ def list_weights(x_auth_token: str | None = Header(default=None), period: str | 
 def summary(x_auth_token: str | None = Header(default=None)):
     _authorized(x_auth_token)
     return get_last_weight()
+
+
+@app.get("/api/backup")
+def backup(x_auth_token: str | None = Header(default=None)):
+    _authorized(x_auth_token)
+    data = export_weights_json()
+    return Response(
+        content=json.dumps(data, ensure_ascii=False, indent=2),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": 'attachment; filename="weights_backup.json"'
+        },
+    )
 
 
 @app.post("/api/weights")

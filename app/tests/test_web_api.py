@@ -123,6 +123,24 @@ def test_summary_empty_is_null(client, workspace):
     assert r.json() is None
 
 
+def test_export_weights_endpoint(client, workspace):
+    client, token = client
+    db = pytest.importorskip("app.db")
+    db.init_db()
+    db.upsert_weight("2025-01-10", 70.0)
+    db.upsert_weight("2025-01-15", 70.5)
+
+    r = client.get("/api/backup", headers=h(token))
+
+    assert r.status_code == 200
+    assert r.json() == [
+        {"date": "2025-01-10", "weight": 70.0},
+        {"date": "2025-01-15", "weight": 70.5},
+    ]
+    assert "attachment" in r.headers["content-disposition"]
+    assert ".json" in r.headers["content-disposition"]
+
+
 def test_patch_date_collision_returns_409(client, workspace):
     client, token = client
     db = pytest.importorskip("app.db")
