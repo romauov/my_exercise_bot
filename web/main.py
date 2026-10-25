@@ -10,8 +10,11 @@ from pydantic import BaseModel
 from app.db import (
     delete_weight,
     get_last_weight,
+    get_request_log,
+    get_request_stats,
     get_setting,
     get_weights,
+    log_request,
     normalize_date,
     set_setting,
     update_weight,
@@ -22,6 +25,34 @@ from app.db import (
 )
 
 app = FastAPI(title="Weight control")
+
+# Paths the stats middleware ignores: the stats page and its own data
+# endpoints, browser assets of any page. Everything else (API calls,
+# root page, scanner probes) gets logged.
+_STATS_SKIP_SUFFIXES = (".css", ".js", ".html", ".ico", ".map", ".png", ".svg", ".webmanifest")
+
+
+@app.middleware("http")
+async def log_requests(request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    skip = (
+        path == "/stats"
+        or path == "/stats.html"
+        or path.startswith("/api/stats")
+        or path == "/favicon.ico"
+        or path.endswith(_STATS_SKIP_SUFFIXES)
+    )
+    if not skip:
+        token = request.headers.get("x-auth-token", "")
+        expected = os.environ.get("WEB_TOKEN", "")
+        mine = bool(expected) and token == expected
+        ip = request.client.host if request.client else "unknown"
+        try:
+            log_request(ip, path, response.status_code, mine)
+        except Exception:
+            pass  # a logging failure must never break the served request
+    return response
 
 
 class WeightPayload(BaseModel):
@@ -81,6 +112,23 @@ def save_goal(payload: GoalPayload, x_auth_token: str | None = Header(default=No
     _authorized(x_auth_token)
     set_setting("goal_weight", payload.weight)
     return {"ok": True, "weight": payload.weight}
+
+
+@app.get("/api/stats")
+def request_stats(
+    x_auth_token: str | None = Header(default=None),
+    include_mine: int | None = None,
+):
+    _authorized(x_auth_token)
+    return get_request_stats(include_mine=bool(include_mine))
+
+
+@app.get("/api/stats/log")
+def request_stats_log(
+    x_auth_token: str | None = Header(default=None), limit: int = 100
+):
+    _authorized(x_auth_token)
+    return get_request_log(max(1, min(limit, 500)))
 
 
 @app.get("/api/backup")

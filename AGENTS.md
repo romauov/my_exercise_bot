@@ -31,7 +31,7 @@ Data persists in `./data` volume.
 
 ## Architecture
 - **Entry point**: `bot.py` — creates `Bot`, `Dispatcher`, includes routers, starts `AsyncIOScheduler` (runs `init_db()` + JSON migration at start)
-- **Web service**: `web/main.py` — FastAPI (token auth via `WEB_TOKEN`), charts UI in `web/static/`; runs with `uvicorn web.main:app` (also as the `web` service in docker-compose)
+- **Web service**: `web/main.py` — FastAPI (token auth via `WEB_TOKEN`), charts UI in `web/static/`; runs with `uvicorn web.main:app` (also as the `web` service in docker-compose); HTTP middleware logs request counts into `request_log` (valid-token requests marked `mine`), stats page at `/stats.html` (`stats.js`) shows them without own traffic by default
 - **Routers**: only `weight_router` and `street_workout_router` are included in `main_handlers.py`; `workout_handlers` and `workout_selection_handlers` are **defined but not wired in** (commented out)
 - **FSM**: heavy use of `StatesGroup` for multi-step inline-keyboard input (weight, street workout, workout CRUD, workout selection)
 - **Scheduler**: `schedule_random_quotes` is active (2-5 random quotes between 10:00-22:00); `set_schedule` (hourly exercises from `schedule.json`) is commented out in `bot.py`

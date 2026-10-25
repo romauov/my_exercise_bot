@@ -23,6 +23,14 @@ CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS request_log (
+    id     INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts     TEXT NOT NULL,
+    ip     TEXT NOT NULL,
+    path   TEXT NOT NULL,
+    status INTEGER NOT NULL,
+    mine   INTEGER NOT NULL DEFAULT 0
+);
 """
 
 
@@ -114,6 +122,60 @@ def update_weight(weight_id, date_iso, weight):
 def delete_weight(weight_id):
     with _connect() as conn:
         conn.execute("DELETE FROM weights WHERE id = ?", (weight_id,))
+
+
+# ---------- request statistics (web service traffic) ----------
+
+def log_request(ip, path, status, mine):
+    """Record one HTTP request; `mine` marks requests with a valid token."""
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO request_log(ts, ip, path, status, mine) VALUES (?, ?, ?, ?, ?)",
+            (datetime.now().isoformat(timespec="seconds"), ip, path, int(status), 1 if mine else 0),
+        )
+
+
+def get_request_stats(include_mine=False):
+    """Aggregated counts over request_log, own traffic excluded by default."""
+    where = "" if include_mine else "WHERE mine = 0"
+    with _connect() as conn:
+        total = conn.execute(
+            f"SELECT COUNT(*) FROM request_log {where}"
+        ).fetchone()[0]
+        per_day = conn.execute(
+            f"SELECT substr(ts, 1, 10) AS day, COUNT(*) AS n FROM request_log {where} GROUP BY day ORDER BY day"
+        ).fetchall()
+        per_path = conn.execute(
+            f"SELECT path, COUNT(*) AS n FROM request_log {where} GROUP BY path ORDER BY n DESC, path"
+        ).fetchall()
+        per_ip = conn.execute(
+            f"SELECT ip, COUNT(*) AS n FROM request_log {where} GROUP BY ip ORDER BY n DESC, ip"
+        ).fetchall()
+    return {
+        "total": total,
+        "per_day": [{"date": row["day"], "count": row["n"]} for row in per_day],
+        "per_path": [{"path": row["path"], "count": row["n"]} for row in per_path],
+        "per_ip": [{"ip": row["ip"], "count": row["n"]} for row in per_ip],
+    }
+
+
+def get_request_log(limit=100):
+    """Most recent logged requests, newest first."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT ts, ip, path, status, mine FROM request_log ORDER BY id DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [
+        {
+            "ts": row["ts"],
+            "ip": row["ip"],
+            "path": row["path"],
+            "status": row["status"],
+            "mine": row["mine"],
+        }
+        for row in rows
+    ]
 
 
 def get_last_weight():
