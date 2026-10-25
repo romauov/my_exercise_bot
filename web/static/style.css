@@ -308,10 +308,30 @@ button.danger { background: var(--danger); color: #fff; }
 
 .error { color: var(--danger); margin: 0; font-size: 14px; }
 
-.backup-fab {
+.fabs {
   position: fixed;
   bottom: 16px;
   right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  z-index: 20;
+}
+
+.backup-fab {
+  background: var(--card);
+  border: 1px solid #ccc;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.stats-fab {
+  align-self: stretch;
+  text-align: center;
+  text-decoration: none;
   background: var(--card);
   border: 1px solid #ccc;
   color: var(--muted);

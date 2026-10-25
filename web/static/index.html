@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Контроль веса</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div class="wrap">
@@ -18,7 +18,6 @@
       <button data-period="year">Год</button>
       <button data-period="all">Всё</button>
     </div>
-    <button class="ghost" id="stats-link" onclick="location.href='/stats.html'">Статистика</button>
     <button id="add-btn" class="primary">Ввести вес</button>
   </header>
   <main class="dashboard">
@@ -82,8 +81,11 @@
   </div>
 </div>
 
-<button id="backup-btn" class="backup-fab">Бэкап</button>
+<div class="fabs">
+  <a href="/stats.html" class="stats-fab">Статистика</a>
+  <button id="backup-btn" class="backup-fab">Бэкап</button>
+</div>
 
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
