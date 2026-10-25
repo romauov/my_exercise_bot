@@ -51,6 +51,7 @@ let currentConfig = loadConfig();
 let lastLabels = [];
 let currentTips = []; // tooltip title per displayed point
 let weeklyView = false; // true when points are weekly buckets
+let currentTickTexts = null; // Map: ISO bucket date -> ["мес", "год"] | ["мес"]
 
 const $ = (id) => document.getElementById(id);
 const MONTHS_SHORT = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
@@ -258,14 +259,29 @@ function mapToBuckets(agg, dailyValues) {
   return acc.map((x) => (x.n ? x.s / x.n : null));
 }
 
-function bucketLabels(agg) {
+/* Tick texts for weekly buckets: a month name on the first bucket of the
+   month, plus a second line with the year in January and on the very
+   first tick (ISO date -> ["дек", "2024"] / ["дек"] / null). */
+function monthTickTexts(buckets) {
+  const map = new Map();
+  let prevYear = null;
   let prevMonth = null;
-  return agg.buckets.map((b) => {
-    const m = b.from.slice(5, 7);
-    if (m === prevMonth) return "";
+  for (const b of buckets) {
+    const y = Number(b.from.slice(0, 4));
+    const m = Number(b.from.slice(5, 7));
+    let lines;
+    if (prevYear === null) {
+      lines = [MONTHS_SHORT[m - 1], String(y)];
+    } else if (m !== prevMonth) {
+      lines = m === 1 ? [MONTHS_SHORT[m - 1], String(y)] : [MONTHS_SHORT[m - 1]];
+    } else {
+      lines = null;
+    }
+    map.set(b.from, lines);
+    prevYear = y;
     prevMonth = m;
-    return MONTHS_SHORT[Number(m) - 1];
-  });
+  }
+  return map;
 }
 
 /* buildSeries() — the view model behind the chart. */
@@ -275,9 +291,14 @@ function buildSeries() {
     const agg = aggregateWeekly(daily);
     return {
       weekly: true,
-      labels: bucketLabels(agg),
+      labels: agg.buckets.map((b) => b.from),
+      tickTexts: monthTickTexts(agg.buckets),
       tips: agg.buckets.map((b) =>
-        b.from === b.to ? b.from : `${fmtDDMM(b.from)}–${fmtDDMM(b.to)}`
+        b.from === b.to
+          ? b.from
+          : b.from.slice(0, 4) === b.to.slice(0, 4)
+            ? `${fmtDDMM(b.from)}–${fmtDDMM(b.to)}`
+            : `${fmtDDMM(b.from)}.${b.from.slice(2, 4)}–${fmtDDMM(b.to)}.${b.to.slice(2, 4)}`
       ),
       raw: weeklyWeights(agg),
       agg,
@@ -286,6 +307,7 @@ function buildSeries() {
   return {
     weekly: false,
     labels: shortLabels(daily),
+    tickTexts: null,
     tips: daily.map((r) => r.date),
     raw: daily.map((r) => r.weight),
     agg: null,
@@ -491,6 +513,7 @@ function rebuildChart() {
   lastLabels = series.labels;
   currentTips = series.tips;
   weeklyView = series.weekly;
+  currentTickTexts = series.tickTexts;
 
   /* "Прогноз тренда" extends the X axis by 2 steps; on weekly buckets
      a step is a week, on daily data a day. */
@@ -581,7 +604,27 @@ function rebuildChart() {
   const range = yScaleRange(rawValues);
   const deltaRange = deltaScale(deltaDatasets.flatMap((d) => d.data));
   const scales = {
-    x: { grid: { display: false }, ticks: { autoSkip: true, maxRotation: 0, padding: 8 } },
+    x: {
+      grid: { display: false },
+      ticks: {
+        /* Weekly buckets: every tick gets a slot (autoSkip off) and the
+           callback is what decides whether it shows a month/year — empty
+           texts would otherwise make autoSkip drop month names. */
+        ...(weeklyView
+          ? {
+              autoSkip: false,
+              callback: (_value, index) => {
+                const label = String(lastLabels[index] ?? "");
+                const lines = currentTickTexts?.get(label);
+                if (lines) return lines;
+                return /^\d{4}-/.test(label) ? "" : label;
+              },
+            }
+          : { autoSkip: true }),
+        maxRotation: 0,
+        padding: 8,
+      },
+    },
     y: {
       min: range.min,
       max: range.max,
