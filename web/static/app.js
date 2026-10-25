@@ -829,6 +829,11 @@ function wire() {
   $("lines-panel").addEventListener("change", onPanelChange);
   $("lines-panel").addEventListener("click", onPanelClick);
 
+  $("login-btn").addEventListener("click", login);
+  $("token-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") login();
+  });
+
   $("add-btn").addEventListener("click", openAddModal);
   $("backup-btn").addEventListener("click", downloadBackup);
   $("add-save").addEventListener("click", saveNewWeight);
